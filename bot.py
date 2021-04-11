@@ -109,8 +109,9 @@ def code_message(message):
 @bot.message_handler(func=lambda message: message.text and message.text.strip().lower() in ['info', 'aiuto'])
 def send_welcome(message):
     bot.send_message(
-        message.chat.id, ["Questo bot è stato creato da Alberto Granzotto <https://www.granzotto.net/>",
-                          "La mia email è <agranzot@mailbox.org>"]
+        message.chat.id, '\n'.join(['Questo bot è stato creato da <a href="https://www.granzotto.net/">Alberto Granzotto</a> (agranzot@mailbox.org).',
+                                    "Il codice sorgente è rilasciato come software libero ed è disponibile su GitHub: https://github.com/vrde/serenissimo"]),
+        parse_mode='HTML'
     )
 
 #########
@@ -132,13 +133,13 @@ def send_stats():
         ADMIN_ID, "People: {people}\nRegistered: {registered}".format(**c))
 
 
-@bot.message_handler(commands=['stats'])
+@ bot.message_handler(commands=['stats'])
 def stats_message(message):
     if from_admin(message):
         send_stats()
 
 
-@bot.message_handler(func=lambda message: True)
+@ bot.message_handler(func=lambda message: True)
 def fallback_message(message):
     bot.reply_to(message, '\n'.join([
         "No go capìo.",
@@ -191,6 +192,7 @@ def check(cf, chat_id):
 
 
 def check_loop():
+    sleep(60)
     while True:
         for chat_id, s in db.items():
             if s['cf'] and s['ulss']:
@@ -198,9 +200,7 @@ def check_loop():
                     check(s['cf'], s['chat_id'])
                 except InvalidCodeException:
                     pass
-
                 save_db(db)
-        # sleep(60)
         sleep(3600)
 
 
