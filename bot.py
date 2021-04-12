@@ -127,7 +127,7 @@ def from_admin(message):
 
 def send_stats():
     c = Counter()
-    for k, v in db.items():
+    for k, v in db.copy().items():
         c['people'] += 1
         if v.get('cf'):
             c['registered'] += 1
@@ -198,7 +198,7 @@ def check(cf, chat_id):
 def check_loop():
     sleep(60)
     while True:
-        for chat_id, s in db.items():
+        for chat_id, s in db.copy().items():
             if s['cf'] and s['ulss']:
                 try:
                     check(s['cf'], s['chat_id'])
