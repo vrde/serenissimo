@@ -100,6 +100,7 @@ def code_message(message):
     bot.send_message(
         chat_id, "Se vuoi cambiare codice fiscale o ULSS, digita /ricomincia")
     bot.send_message(chat_id, "Se vuoi cancellarti, digita /cancella")
+    bot.send_message(chat_id, "Se vuoi più informazioni, digita /info")
     bot.send_message(ADMIN_ID, "New user")
     send_stats()
     save_db(db)
@@ -144,7 +145,9 @@ def fallback_message(message):
     bot.reply_to(message, '\n'.join([
         "No go capìo.",
         "Se vuoi cambiare codice fiscale o ULSS, digita /ricomincia",
-        "Se vuoi cancellarti, digita /cancella"]))
+        "Se vuoi cancellarti, digita /cancella",
+        "Se vuoi più informazioni, digita /info",
+    ]))
 
 
 def check_availability(cf, ulss):
