@@ -45,13 +45,11 @@ def send_welcome(message):
     ]
     markup.add(*buttons)
     bot.send_message(
-        message.chat.id, "Ciao, me ciamo Serenissimo e i me gà programmà par darte na man coa prenotasiòn del vacino, queo anti-covid se intende."
-    )
-    bot.send_message(
-        message.chat.id, "Praticamente te me dixi ła ULSS e el to codice fiscałe, e mi controeo ogni ora se ghe xe posto par prenotarte."
-    )
-    bot.send_message(
-        message.chat.id, "Per qualsiasi informazione controlla il sito ufficiale https://vaccinicovid.regione.veneto.it/")
+        message.chat.id, '\n\n'.join([
+            "Ciao, me ciamo Serenissimo e i me gà programmà par darte na man coa prenotasiòn del vacino, queo anti-covid se intende.",
+            "Praticamente te me dixi ła ULSS e el to codice fiscałe, e mi controeo ogni ora se ghe xe posto par prenotarte.",
+            "Per comunicazioni ufficiali riguardo ai vaccini controlla il sito https://vaccinicovid.regione.veneto.it/.",
+            "Il bot è stato creato da Alberto Granzotto, per informazioni digita /info"]))
     bot.send_message(
         message.chat.id, "Seleziona la tua ULSS.",
         reply_markup=markup)
@@ -82,10 +80,17 @@ def ulss_message(message):
     save_db(db)
 
 
-@bot.message_handler(func=lambda message: message.text and codicefiscale.is_valid(message.text.strip()))
+def clean_cf(s):
+    return ''.join(s.split()).upper()
+
+
+@bot.message_handler(func=lambda message: message.text and codicefiscale.is_valid(clean_cf(message.text)))
 def code_message(message):
-    cf = message.text.strip().upper()
+    cf = clean_cf(message.text)
     chat_id = str(message.chat.id)
+    if chat_id not in db:
+        send_welcome(message)
+        return
     db[chat_id]['cf'] = cf
     try:
         check(cf, chat_id)
@@ -99,17 +104,18 @@ def code_message(message):
         bot.send_message(
             message.chat.id, "Sei nella categoria di persone che possono prenotare! Ti avverto non appena si liberano posti per la vaccinazione (controllo ogni ora).")
     bot.send_message(
-        chat_id, "Se vuoi cambiare codice fiscale o ULSS, digita /ricomincia")
-    bot.send_message(chat_id, "Se vuoi cancellarti, digita /cancella")
-    bot.send_message(chat_id, "Se vuoi più informazioni, digita /info")
-    bot.send_message(ADMIN_ID, "New user")
+        chat_id, '\n'.join([
+            "Se vuoi cambiare codice fiscale o ULSS, digita /ricomincia",
+            "Se vuoi cancellarti, digita /cancella",
+            "Se vuoi più informazioni, digita /info",
+        ]))
     send_stats()
     save_db(db)
 
 
 @bot.message_handler(commands=['info', 'informazioni', 'aiuto'])
 @bot.message_handler(func=lambda message: message.text and message.text.strip().lower() in ['info', 'aiuto'])
-def send_welcome(message):
+def send_info(message):
     bot.send_message(
         message.chat.id, '\n'.join(['Questo bot è stato creato da <a href="https://www.granzotto.net/">Alberto Granzotto</a> (agranzot@mailbox.org).',
                                     "Il codice sorgente è rilasciato come software libero ed è disponibile su GitHub: https://github.com/vrde/serenissimo"]),
@@ -135,13 +141,13 @@ def send_stats():
         ADMIN_ID, "People: {people}\nRegistered: {registered}".format(**c))
 
 
-@ bot.message_handler(commands=['stats'])
+@bot.message_handler(commands=['stats'])
 def stats_message(message):
     if from_admin(message):
         send_stats()
 
 
-@ bot.message_handler(func=lambda message: True)
+@bot.message_handler(func=lambda message: True)
 def fallback_message(message):
     bot.reply_to(message, '\n'.join([
         "No go capìo.",
@@ -196,7 +202,7 @@ def check(cf, chat_id):
 
 
 def check_loop():
-    sleep(60)
+    sleep(600)
     while True:
         for chat_id, s in db.copy().items():
             if s['cf'] and s['ulss']:
