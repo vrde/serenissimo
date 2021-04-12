@@ -64,8 +64,9 @@ def delete_message(message):
     bot.send_message(
         message.chat.id, "Ho cancellato i tuoi dati, non riceverai più nessuna notifica. Se vuoi ricominciare digita /ricomincia"
     )
-    del db[chat_id]
-    save_db(db)
+    if chat_id in db:
+        del db[chat_id]
+        save_db(db)
 
 
 @bot.message_handler(regexp="^ULSS[1-9] .+$")
