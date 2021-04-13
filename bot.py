@@ -1,4 +1,5 @@
 import time
+import re
 from time import sleep
 from dotenv import load_dotenv
 from threading import Thread, Lock
@@ -175,9 +176,17 @@ def check_availability(cf, ulss):
     data = {'cod_fiscale': cf}
     s = requests.Session()
     s.post('https://vaccinicovid.regione.veneto.it/ulss{}'.format(ulss))
-    s.post('https://vaccinicovid.regione.veneto.it/ulss{}/azione/controllocf'.format(ulss), data=data)
     r = s.post(
-        'https://vaccinicovid.regione.veneto.it/ulss{}/azione/sceglisede/servizio/2'.format(ulss), data=data)
+        'https://vaccinicovid.regione.veneto.it/ulss{}/azione/controllocf'.format(ulss), data=data)
+
+    m = re.findall('\(\d+,(\d+)\)', r.text)
+    if not m:
+        raise InvalidCodeException()
+
+    id = m[0]
+
+    r = s.post(
+        'https://vaccinicovid.regione.veneto.it/ulss{}/azione/sceglisede/servizio/{}'.format(ulss, id), data=data)
     soup = BeautifulSoup(r.text, 'html.parser')
     spots = []
     for b in soup.find_all('button'):
