@@ -203,6 +203,9 @@ def save_db(db):
 
 
 def check(cf, chat_id):
+    # Someone removed themselves while iterating
+    if chat_id not in db:
+        return
     known_spots = db[chat_id]['known_spots']
     ulss = db[chat_id]['ulss']
     available_spots = check_availability(cf, ulss)
