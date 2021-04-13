@@ -1,6 +1,6 @@
 from time import sleep
 from dotenv import load_dotenv
-from threading import Thread
+from threading import Thread, Lock
 from datetime import datetime
 from collections import Counter
 import traceback
@@ -17,6 +17,7 @@ logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 log = logging.getLogger()
 load_dotenv()
+db_lock = Lock()
 
 
 class InvalidCodeException(Exception):
@@ -195,8 +196,9 @@ def load_db():
 
 
 def save_db(db):
-    with open('db.json', 'w') as f:
-        json.dump(db, f, indent=2)
+    with db_lock:
+        with open('db.json', 'w') as f:
+            json.dump(db, f, indent=2)
 
 
 def check(cf, chat_id):
@@ -221,7 +223,8 @@ def check_loop():
                     check(s['cf'], s['chat_id'])
                 except InvalidCodeException:
                     pass
-                save_db(db)
+                else:
+                    save_db(db)
         sleep(3600)
 
 
