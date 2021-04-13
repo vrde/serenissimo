@@ -97,10 +97,10 @@ def code_message(message):
     try:
         check(cf, chat_id)
     except InvalidCodeException:
+        # bot.send_message(
+        #    chat_id, "Non appartieni alle categorie che attualmente possono prenotare.")
         bot.send_message(
-            chat_id, "Non appartieni alle categorie che attualmente possono prenotare.")
-        bot.send_message(
-            chat_id, 'Controllerò comunque se si liberano posti per {} nella ULSS {} (controllo ogni ora).'.format(
+            chat_id, 'Controllerò se si liberano posti per {} nella ULSS {} (controllo ogni ora).'.format(
                 cf, db[chat_id]['ulss']))
     else:
         bot.send_message(
@@ -216,7 +216,7 @@ def check(cf, chat_id):
 
 
 def check_loop():
-    sleep(600)
+    sleep(60)
     while True:
         c = Counter()
         bot.send_message(ADMIN_ID, "👇 Start checking for spots")
@@ -232,9 +232,9 @@ def check_loop():
                     save_db(db)
         end = time.time()
         bot.send_message(
-            ADMIN_ID, ["🏁 Done checking for spots",
-                       "Messages sent: {}".format(c['success']),
-                       "Total time: {:.2f}s".format(end-start)]
+            ADMIN_ID, '\n'.join(["🏁 Done checking for spots",
+                                 "Messages sent: {}".format(c['success']),
+                                 "Total time: {:.2f}s".format(end-start)])
         )
         sleep(3600)
 
