@@ -122,13 +122,14 @@ def send_info(message):
                                     '', '',
                                     'Informativa sulla privacy:',
                                     '- I tuoi dati vengono usati esclusivamente per controllare la disponibilità di un appuntamento per la vaccinazione usando il sito https://vaccinicovid.regione.veneto.it/',
-                                    '- Nel database i dati memorizzati sono:'
+                                    '- Nel database i dati memorizzati sono:',
                                     '    - Il tuo identificativo di Telegram (NON il numero di telefono).',
                                     '    - Il suo codice fiscale.',
                                     '    - La ULSS di riferimento.',
                                     '- I tuoi dati sono memorizzati in un server in Germania.',
-                                    '- Se digiti "cancella", i tuoi dati vengono eliminati completamente.'
-                                    '- Il codice del bot è pubblicato su https://github.com/vrde/serenissimo e chiunque può verificarne il funzionamento.']),
+                                    '- Se digiti "cancella", i tuoi dati vengono eliminati completamente.',
+                                    '- Il codice del bot è pubblicato su https://github.com/vrde/serenissimo e chiunque può verificarne il funzionamento.'
+                                    ]),
         parse_mode='HTML'
     )
 
