@@ -1,3 +1,4 @@
+import time
 from time import sleep
 from dotenv import load_dotenv
 from threading import Thread, Lock
@@ -217,6 +218,9 @@ def check(cf, chat_id):
 def check_loop():
     sleep(600)
     while True:
+        c = Counter()
+        bot.send_message(ADMIN_ID, "👇 Start checking for spots")
+        start = time.time()
         for chat_id, s in db.copy().items():
             if s['cf'] and s['ulss']:
                 try:
@@ -224,7 +228,14 @@ def check_loop():
                 except InvalidCodeException:
                     pass
                 else:
+                    c['success'] += 1
                     save_db(db)
+        end = time.time()
+        bot.send_message(
+            ADMIN_ID, ["🏁 Done checking for spots",
+                       "Messages sent: {}".format(c['success']),
+                       "Total time: {:.2f}s".format(end-start)]
+        )
         sleep(3600)
 
 
