@@ -113,12 +113,22 @@ def code_message(message):
     save_db(db)
 
 
-@bot.message_handler(commands=['info', 'informazioni', 'aiuto'])
-@bot.message_handler(func=lambda message: message.text and message.text.strip().lower() in ['info', 'aiuto'])
+@bot.message_handler(commands=['info', 'informazioni', 'aiuto', 'privacy'])
+@bot.message_handler(func=lambda message: message.text and message.text.strip().lower() in ['info', 'aiuto', 'privacy'])
 def send_info(message):
     bot.send_message(
         message.chat.id, '\n'.join(['Questo bot è stato creato da <a href="https://www.granzotto.net/">Alberto Granzotto</a> (agranzot@mailbox.org).',
-                                    "Il codice sorgente è rilasciato come software libero ed è disponibile su GitHub: https://github.com/vrde/serenissimo"]),
+                                    "Il codice sorgente è rilasciato come software libero ed è disponibile su GitHub: https://github.com/vrde/serenissimo",
+                                    '', '',
+                                    'Informativa sulla privacy:',
+                                    '- I tuoi dati vengono usati esclusivamente per controllare la disponibilità di un appuntamento per la vaccinazione usando il sito https://vaccinicovid.regione.veneto.it/',
+                                    '- Nel database i dati memorizzati sono:'
+                                    '    - Il tuo identificativo di Telegram (NON il numero di telefono).',
+                                    '    - Il suo codice fiscale.',
+                                    '    - La ULSS di riferimento.',
+                                    '- I tuoi dati sono memorizzati in un server in Germania.',
+                                    '- Se digiti "cancella", i tuoi dati vengono eliminati completamente.'
+                                    '- Il codice del bot è pubblicato su https://github.com/vrde/serenissimo e chiunque può verificarne il funzionamento.']),
         parse_mode='HTML'
     )
 
