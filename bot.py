@@ -245,9 +245,8 @@ def notify_locations(chat_id):
                  "Prenotati su https://vaccinicovid.regione.veneto.it/",
                  "Se riesci a vaccinarti, scrivi /vaccinato per non ricevere più notifiche."
                  ]))
-
-    user['locations'] = available_locations
-    return state, available_locations
+        user['locations'] = available_locations
+    return state, new_locations
 
 
 def check_loop():
