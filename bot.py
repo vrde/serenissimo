@@ -236,8 +236,7 @@ def notify_locations(chat_id):
     if new_locations:
         log.info('Notify %s, ULSS %s, locations %s',
                  cf, ulss, ', '.join(available_locations))
-        # bot.send_message(
-        print(
+        bot.send_message(
             chat_id, '\n'.join(
                 ["Sedi disponibili:",
                  "",
