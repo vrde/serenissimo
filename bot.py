@@ -263,7 +263,7 @@ def check_loop():
                     c[state] += 1
                     if locations:
                         c['success'] += 1
-                    save_db(db)
+                        save_db(db)
             except KeyboardInterrupt:
                 print("Ciao")
                 sys.exit()
