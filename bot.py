@@ -252,7 +252,7 @@ def notify_locations(chat_id):
 
 
 def check_loop():
-    # sleep(60)
+    sleep(60)
     while True:
         c = Counter()
         bot.send_message(ADMIN_ID, "👇 Start checking for locations")
