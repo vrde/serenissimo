@@ -205,9 +205,10 @@ def load_db():
 
 
 def save_db(db):
+    db_copy = db.copy()
     with db_lock:
         with open('db.json', 'w') as f:
-            json.dump(db, f, indent=2)
+            json.dump(db_copy, f, indent=2)
 
 
 def notify_locations(chat_id):
