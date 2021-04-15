@@ -233,7 +233,7 @@ def notify_locations(chat_id):
     log.info('Check %s, ULSS %s, state %s', cf, ulss, state)
 
     # If we find some new locations, we send all available locations to the user
-    if new_locations:
+    if new_locations and available_locations:
         log.info('Notify %s, ULSS %s, locations %s',
                  cf, ulss, ', '.join(available_locations))
         bot.send_message(
