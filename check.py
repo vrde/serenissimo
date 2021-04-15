@@ -58,6 +58,8 @@ def parse_locations(html):
     locations = []
     disabled_locations = []
     for b in soup.find_all('button'):
+        if 'act_step(1)' in b.attrs.get('onclick', ''):
+            continue
         if 'disabled' not in b.attrs:
             locations.append(b.text.strip())
         else:
@@ -66,8 +68,7 @@ def parse_locations(html):
         log.info('Enabled locations %s', ', '.join(locations))
     if disabled_locations:
         log.info('Disabled locations %s', ', '.join(disabled_locations))
-    if len(locations) == 1 and locations[0].strip() == 'Torna indietro':
-        return []
+
     return locations
 
 
