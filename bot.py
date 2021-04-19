@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from threading import Thread, Lock
 from datetime import datetime
 from collections import Counter
+from random import shuffle
 import traceback
 import json
 import sys
@@ -112,7 +113,7 @@ def code_message(message):
         return
     db[chat_id]['cf'] = cf
     save_db(db)
-    state, locations = notify_locations(chat_id)
+    state, locations, notified = notify_locations(chat_id)
     if state == 'not_eligible':
         bot.send_message(
             message.chat.id, '\n'.join(["Non sei nella categoria di persone che attualmente si possono prenotare. "
@@ -216,14 +217,15 @@ def notify_locations(chat_id):
 
     # Check if user exists
     if not user:
-        return None, None
+        return None, None, None
 
     cf = user.get('cf')
     ulss = user.get('ulss')
+    now = time()
 
     # Check if user has all fields required to book an appointment
     if not cf or not ulss:
-        return None, None
+        return None, None, None
 
     old_locations = user.get('locations', [])
     state, available_locations = check(cf, ulss)
@@ -246,21 +248,48 @@ def notify_locations(chat_id):
                  "Se riesci a vaccinarti, scrivi /vaccinato per non ricevere più notifiche."
                  ]))
         user['locations'] = available_locations
-    return state, new_locations
+        user['last_message'] = now
+    user['state'] = state
+    user['last_check'] = now
+    return state, new_locations, new_locations and available_locations
+
+
+ELIGIBLE_DELTA = 30*60 # Wait 30 min for eligible
+ELIGIBLE_SPECIAL_DELTA = 30*60 # Wait 30 min for eligible special
+NON_ELIGIBLE_DELTA = 4*60*60 # Wait 4 hours for other categories
+
+
+def should_check(chat_id):
+    user = db.get(chat_id)
+    cf = user.get('cf')
+    ulss = user.get('ulss')
+    if not user or not cf or not ulss:
+        return False
+    now = time()
+    state = user.get('state')
+    last_check = user.get('last_check', 0)
+    delta = now - last_check
+    return (state == 'eligible' and delta > ELIGIBLE_DELTA) or\
+            (state == 'eligible_special' and delta > ELIGIBLE_SPECIAL_DELTA) or\
+            (delta > NON_ELIGIBLE_DELTA)
 
 
 def check_loop():
     sleep(60)
     while True:
         c = Counter()
-        bot.send_message(ADMIN_ID, "👇 Start checking for locations")
         start = time()
-        for chat_id, s in db.copy().items():
+        chat_ids= list(db.copy().keys())
+        shuffle(chat_ids)
+        for chat_id in chat_ids:
+            if not should_check(chat_id):
+                continue
+            c['total'] += 1
             try:
-                state, locations = notify_locations(chat_id)
+                state, locations, notified = notify_locations(chat_id)
                 if state:
                     c[state] += 1
-                    if locations:
+                    if notified:
                         c['success'] += 1
                         save_db(db)
             except KeyboardInterrupt:
@@ -272,18 +301,20 @@ def check_loop():
                     ADMIN_ID, '🤬🤬🤬\n' + ''.join(stack))
                 print(''.join(stack))
         end = time()
-        bot.send_message(
-            ADMIN_ID,
-            '\n'.join(["🏁 Done checking for locations",
-                       "Messages sent: {}".format(c['success']),
-                       "Eligible: {}".format(c['eligible']),
-                       "Eligible special: {}".format(c['eligible_special']),
-                       "Not eligible: {}".format(c['not_eligible']),
-                       "Already vaccinated: {}".format(
-                           c['already_vaccinated']),
-                       "Total time: {:.2f}s".format(end-start)])
-        )
-        sleep(1800)
+        save_db(db)
+        if c['total'] > 0:
+            bot.send_message(
+                ADMIN_ID,
+                '\n'.join(["🏁 Done checking for locations",
+                        "Messages sent: {}".format(c['success']),
+                        "Eligible: {}".format(c['eligible']),
+                        "Eligible special: {}".format(c['eligible_special']),
+                        "Not eligible: {}".format(c['not_eligible']),
+                        "Already vaccinated: {}".format(
+                            c['already_vaccinated']),
+                        "Total time: {:.2f}s".format(end-start)])
+            )
+        sleep(10)
 
 
 if __name__ == "__main__":

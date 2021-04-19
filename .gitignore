@@ -1,5 +1,6 @@
 # Custom paths
 
+.vscode
 db.json
 
 # Byte-compiled / optimized / DLL files
