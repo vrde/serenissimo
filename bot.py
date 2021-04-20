@@ -50,7 +50,7 @@ def send_welcome(message):
     bot.send_message(
         message.chat.id, '\n\n'.join([
             "🔔 AVVISO 🔔",
-            "Il portale di prenotazione https://vaccinicovid.regione.veneto.it/ ha modificato la gestione delle categorie fragili. A causa di questo aggiornamento alcune funzionalità di Serenissimo non sono al momento disponibili. Sto lavorando per ripristinarle quanto prima.",
+            "Il portale di prenotazione https://vaccinicovid.regione.veneto.it/ ha modificato la gestione delle categorie fragili. A causa di questo aggiornamento Serenissimo in alcuni casi potrebbe non funzionare correttamente. Sto lavorando per sistemare il problema.",
             "Invito comunque a controllare il sito ufficiale: https://vaccinicovid.regione.veneto.it/",
         ]))
     bot.send_message(
@@ -147,7 +147,10 @@ def send_info(message):
         message.chat.id, '\n'.join(['Questo bot è stato creato da <a href="https://www.granzotto.net/">Alberto Granzotto</a> (agranzot@mailbox.org). '
                                     "Ho creato il bot di mia iniziativa, se trovi errori o hai correzioni mandami una mail. "
                                     "Il codice sorgente è rilasciato come software libero ed è disponibile su GitHub: https://github.com/vrde/serenissimo",
-                                    '', '',
+                                    '',
+                                    "Per cambiare codice fiscale o ULSS, digita /ricomincia",
+                                    "Per cancellarti, digita /cancella",
+                                    '',
                                     'Informativa sulla privacy:',
                                     '- I tuoi dati vengono usati esclusivamente per controllare la disponibilità di un appuntamento per la vaccinazione usando il sito https://vaccinicovid.regione.veneto.it/',
                                     '- Nel database i dati memorizzati sono:',
