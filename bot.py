@@ -303,7 +303,7 @@ def should_check(chat_id):
 
 
 def check_loop():
-    sleep(60)
+    sleep(600)
     while True:
         c = Counter()
         start = time()
@@ -342,7 +342,7 @@ def check_loop():
                             c['already_vaccinated']),
                         "Total time: {:.2f}s".format(end-start)])
             )
-        sleep(10)
+        sleep(600)
 
 
 if __name__ == "__main__":
