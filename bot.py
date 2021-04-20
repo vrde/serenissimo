@@ -176,13 +176,35 @@ def send_stats():
         ADMIN_ID, "People: {people}\nRegistered: {registered}\nVaccinated: {vaccinated}".format(**c))
 
 
-@ bot.message_handler(commands=['stats'])
+@bot.message_handler(commands=['stats'])
 def stats_message(message):
     if from_admin(message):
         send_stats()
 
 
-@ bot.message_handler(func=lambda message: True)
+@bot.message_handler(commands=['broadcast'])
+def broadcast_message(message):
+    if from_admin(message):
+        c = Counter()
+        start = time()
+        chat_ids = list(db.copy().keys())
+        shuffle(chat_ids)
+        text = message.text[11:]
+        if not text:
+            return
+        for chat_id in chat_ids:
+            c['total'] += 1
+            try:
+                bot.send_message(chat_id, text)
+            except Exception as e:
+                stack = traceback.format_exception(*sys.exc_info())
+                bot.send_message(
+                    ADMIN_ID, '🤬🤬🤬\n' + ''.join(stack))
+                print(''.join(stack))
+        end = time()
+        bot.send_message(ADMIN_ID, "Sent {} messages in {:.2f}s".format(c['total'], end-start))
+
+@bot.message_handler(func=lambda message: True)
 def fallback_message(message):
     bot.reply_to(message, '\n'.join([
         "No go capìo.",
