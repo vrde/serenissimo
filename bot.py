@@ -49,6 +49,12 @@ def send_welcome(message):
     markup.add(*buttons)
     bot.send_message(
         message.chat.id, '\n\n'.join([
+            "🔔 AVVISO 🔔",
+            "Il portale di prenotazione https://vaccinicovid.regione.veneto.it/ ha modificato la gestione delle categorie fragili. A causa di questo aggiornamento alcune funzionalità di Serenissimo non sono al momento disponibili. Sto lavorando per ripristinarle quanto prima.",
+            "Invito comunque a controllare il sito ufficiale: https://vaccinicovid.regione.veneto.it/",
+        ]))
+    bot.send_message(
+        message.chat.id, '\n\n'.join([
             "Ciao, me ciamo Serenissimo e i me gà programmà par darte na man coa prenotasiòn del vacino, queo anti-covid se intende.",
             "Praticamente controeo ogni 30 minuti se ghe xe posto par prenotarte.",
             "Per comunicazioni ufficiali riguardo ai vaccini controlla il sito https://vaccinicovid.regione.veneto.it/.",
@@ -188,12 +194,12 @@ def broadcast_message(message):
         c = Counter()
         start = time()
         chat_ids = list(db.copy().keys())
-        shuffle(chat_ids)
         text = message.text[11:]
         if not text:
             return
         for chat_id in chat_ids:
             c['total'] += 1
+            log.info('Broadcast message to %s', chat_id)
             try:
                 bot.send_message(chat_id, text)
             except Exception as e:
