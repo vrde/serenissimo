@@ -198,6 +198,11 @@ def broadcast_message(message):
         if not text:
             return
         for chat_id in chat_ids:
+            user = db.get(chat_id, {})
+            cf = user.get('cf')
+            ulss = user.get('ulss')
+            if not cf or not ulss:
+                continue
             c['total'] += 1
             log.info('Broadcast message to %s', chat_id)
             try:
