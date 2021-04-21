@@ -1,41 +1,109 @@
 import unittest
 
-import check
+import agent
 
 
-class TestCheck(unittest.TestCase):
-    def test_parse_user_options__choose(self):
-        html = """
-            <h2 class="centera">Selezionare un servizio</h2>
-            <button class="btn btn-primary btn-full" onclick="act_step(2,165)" type="button">Vaccinazione Fragili</button>
-            <button class="btn btn-primary btn-full" onclick="act_step(2,179)" type="button">Vaccinazione Vulnerabili</button> 
-            <script>toggolaelem();</script>"""
+class TestStep1(unittest.TestCase):
 
-        state, options = check.parse_user_options(html)
-        self.assertEqual(state, 'choose')
-        self.assertDictEqual(options, {
-            'Vaccinazione Fragili': '165',
-            'Vaccinazione Vulnerabili': '179'
-        })
-
-    def test_parse_user_options__not_eligible(self):
-        html = """<div class="alert alert-danger">Attenzione 
-non appartieni alle categorie che attualmente possono prenotare
-
-</div>
-<div class="centera"><button class="btn btn-primary" onclick="act_step(1);" type="button"><i class="fas fa-undo"></i> Torna indietro</button></div>
-
-<script>toggolaelem();</script>"""
-
-        state, options = check.parse_user_options(html)
-        self.assertEqual(state, 'not_eligible')
-        self.assertIsNone(options)
-
-    def test_parse_user_options__eligible(self):
-        html = """<script>act_step(2,105)</script> """
-        state, options = check.parse_user_options(html)
+    def test_step_1_parse__eligible(self):
+        html = """<script>act_step(2,178)</script> """
+        state, url= agent.step_1_parse(html, 'XXXXXXXXXXXXXXXX', '0')
         self.assertEqual(state, 'eligible')
-        self.assertEqual(options, '105')
+        self.assertEqual(url, 'https://vaccinicovid.regione.veneto.it/ulss0/azione/sceglisede/servizio/178')
+
+    def test_step_1_parse__not_registered(self):
+        html = '''
+    
+
+    <div class="alert alert-danger">
+        
+                Il codice fiscale inserito non risulta tra quelli registrati presso questa ULSS. Torna alla <a href="/">homepage</a> e seleziona la tua ULSS di riferimento.
+            
+    </div>
+    <div class="centera"><button class="btn btn-primary btn-back" onclick="act_step(1);" type="button"><i class="fas fa-undo"></i> Torna indietro</button></div>
+
+    <script>toggolaelem();</script>
+
+        '''
+        with self.assertRaises(agent.NotRegisteredError) as context:
+            agent.step_1_parse(html, 'XXXXXXXXXXXXXXXX', '0')
+        self.assertTrue('Il codice fiscale inserito non risulta tra quelli registrati presso questa ULSS' in str(context.exception))
+    
+    def test_step_1_parse__maybe_eligible(self):
+        html='''
+
+    <div class="alert alert-danger">
+        
+                Attenzione non appartieni alle categorie che attualmente possono prenotare
+                
+                , se ritieni di rientrarci utilizza il pulsante sottostante per accedere al processo di autocertificazione.
+                <br><br>
+                <div style="text-align:center;">
+                <a class="btn btn-danger" href="javascript:sceglicorte()";>Autocertificati</a> 
+                </div>
+    </div>
+    <div class="centera"><button class="btn btn-primary btn-back" onclick="act_step(1);" type="button"><i class="fas fa-undo"></i> Torna indietro</button></div>
+
+    <script>toggolaelem();</script>
+    '''
+
+    def test_step_1_maybe_eligible_next(self):
+        html='''
+	<script>$('#t_des_1').html('<b>XXXXXXXXXXXXXXXX</b>');</script>
+	
+		<h2 class="centera">Selezionare la categoria per la quale si vuole autocertificarsi</h2>
+		<h5>Si ricorda che al momento della vaccinazione verr&agrave; richiesto un documento di identit&agrave; e un autocertificazione che attesti l'effettiva appartenenza alla categoria selezionata</h5>
+		<button class="btn btn-primary btn-full"  onclick="inviacf(1105)" type="button">Estremamente vulnerabili nati prima del 1951</button> <button class="btn btn-primary btn-full"  onclick="inviacf(1106)" type="button">Disabili gravi (L.104 art.3 c.3)</button> 
+				<div style="text-align:center;padding:10px;">
+				<button class="btn btn-primary btn-back" onclick="act_step(1);" type="button"><i class="fas fa-undo"></i> Torna a identificazione</button>
+				</div>
+				
+	<script>toggolaelem();</script>'''
+
+        options = agent.step_1_next_maybe_eligible('maybe_eligible', html, 'XXXXXXXXXXXXXXXX', 0)
+        self.assertDictEqual(
+            options, {
+                'Estremamente vulnerabili nati prima del 1951': 'https://vaccinicovid.regione.veneto.it/ulss0/azione/controllocf/corte/1105',
+                'Disabili gravi (L.104 art.3 c.3)': 'https://vaccinicovid.regione.veneto.it/ulss0/azione/controllocf/corte/1106'
+            }
+        )
+
+    def test_step_1_eligible_next(self):
+        html = '''
+
+    
+    <script>$('#t_des_1').html('<b>XXXXXXXXXXXXXXXX</b>');</script>
+    
+    
+    
+        <h2 class="centera">Selezionare una sede</h2>
+        <button class="btn btn-primary btn-full"  disabled type="button">Chioggia ASPO  [DISPONIBILITA ESAURITA] <br>Via Maestri del Lavoro 50, Chioggia (VE)</button> <button class="btn btn-primary btn-full"  onclick="act_step(3,5)" type="button">Dolo PALAZZETTO DELLO SPORT <br>Viale dello Sport 1, Dolo (VE)</button> <button class="btn btn-primary btn-full"  disabled type="button">Mirano BOCCIODROMO  [DISPONIBILITA ESAURITA] <br>Via G. Matteotti 46, Mirano (VE)</button> <button class="btn btn-primary btn-full"  disabled type="button">Venezia PALA EXPO  [DISPONIBILITA ESAURITA] <br>Via Galileo Ferraris 5, Marghera  (VE)</button> <button class="btn btn-primary btn-full"  disabled type="button">Venezia RAMPA SANTA CHIARA  [DISPONIBILITA ESAURITA] <br>Rampa Santa Chiara, Venezia (ex Sede ACI)</button> 
+                <div style="text-align:center;padding:10px;">
+                <button class="btn btn-primary btn-back" onclick="act_step(1);" type="button"><i class="fas fa-undo"></i> Torna a identificazione</button>
+                </div>
+                
+        
+        
+        <script>toggolaelem();</script>
+
+
+    
+
+    '''
+        locations = agent.step_1_next_eligible('eligible', html, 'XXXXXXXXXXXXXXXX', 0)
+        self.assertDictEqual(
+            locations, {
+                'available': [
+                    'Dolo PALAZZETTO DELLO SPORT Viale dello Sport 1, Dolo (VE)'
+                ],
+                'unavailable': [
+                    'Chioggia ASPO  [DISPONIBILITA ESAURITA] Via Maestri del Lavoro 50, Chioggia (VE)',
+                    'Mirano BOCCIODROMO  [DISPONIBILITA ESAURITA] Via G. Matteotti 46, Mirano (VE)',
+                    'Venezia PALA EXPO  [DISPONIBILITA ESAURITA] Via Galileo Ferraris 5, Marghera  (VE)',
+                    'Venezia RAMPA SANTA CHIARA  [DISPONIBILITA ESAURITA] Rampa Santa Chiara, Venezia (ex Sede ACI)'
+                ]
+            }
+        )
 
 
 if __name__ == '__main__':
