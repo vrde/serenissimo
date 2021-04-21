@@ -296,7 +296,7 @@ NON_ELIGIBLE_DELTA = 4*60*60 # Wait 4 hours for other categories
 
 
 def should_check(chat_id):
-    user = db.get(chat_id)
+    user = db.get(chat_id, {})
     cf = user.get('cf')
     ulss = user.get('ulss')
     if not user or not cf or not ulss:
