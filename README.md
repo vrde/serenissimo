@@ -22,11 +22,11 @@ Serenissimo si attiene alle informazioni ricavabili dal portale della Regione. D
 
 Se hai suggerimenti o proposte su come risolvere questo problema, scrivimi a <agranzot@mailbox.org>.
 
-## Così privilegi le persone che sanno usare la tecnologia.
+## Perché devo inserire la ULSS quando hai già il mio codice fiscale?
 
-No. Non ho costruito il bot per *saltare la fila*, fare i furbi o per privilegiare alcune categorie di persone piuttosto che altre. **Al contrario** il bot è pensato per rendere più accessibile il servizio di prenotazione, soprattutto per i meno esperti e per chi ha difficoltà a controllare ripetutamente lo stato delle prenotazioni.
+Il portale della Regione Veneto funziona così. Avevo pensato di chiedere solo il codice fiscale e "cercare" in tutte le 9 ULSS, ma questo avrebbe aumentato il numero di richieste del bot.
 
-## Il bot fa troppe richieste e rischia di rendere la piattaforma di vaccinazione inaccessibile!
+## Il bot rischia di rendere la piattaforma di vaccinazione inaccessibile?
 
 No. **Il bot fa richieste sequenziali, non in parallelo.** Cosa significa? Immagina di essere all'ufficio delle poste, davanti a te ci sono 10 sportelli liberi. Preferisci avere davanti a te una persona con 100 lettere, o 100 persone con una lettera? Meglio una persona con 100 lettere, visto che terrà occupato solo uno degli sportelli disponibili. Il bot ha tante lettere in mano ma occupa solo uno degli sportelli, e per molto poco tempo!
 
@@ -37,9 +37,9 @@ Entro volentieri nei dettagli tecnici. Tutto quello che dico è verificabile dal
 
 Il bot **non crea un carico maggiore ai server** perché le richieste che fa sono a nome di altri utenti. Inoltre il bot ottimizza le richieste, non carica file statici come immagini, JavaScript o fogli di stile, alleggerendo il traffico.
 
-## Perché devo inserire la ULSS quando hai già il mio codice fiscale?
+## Privilegi le persone che sanno usare le nuove tecnologie?
 
-Il portale della Regione Veneto funziona così. Avevo pensato di chiedere solo il codice fiscale e "cercare" in tutte le 9 ULSS, ma questo avrebbe aumentato il numero di richieste del bot.
+No. Non ho costruito il bot per *saltare la fila*, fare i furbi o per privilegiare alcune categorie di persone piuttosto che altre. **Al contrario** il bot è pensato per rendere più accessibile il servizio di prenotazione, soprattutto per i meno esperti e per chi ha difficoltà a controllare ripetutamente lo stato delle prenotazioni.
 
 ## Serenissimo può inviare SMS?
 
