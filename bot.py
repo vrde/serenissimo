@@ -38,7 +38,11 @@ bot = telebot.TeleBot(TOKEN, parse_mode=None)
 
 def send_message(chat_id, *messages, reply_markup=None, parse_mode="HTML"):
     bot.send_message(
-        chat_id, "\n".join(messages), reply_markup=reply_markup, parse_mode=parse_mode
+        chat_id,
+        "\n".join(messages),
+        reply_markup=reply_markup,
+        parse_mode=parse_mode,
+        disable_web_page_preview=True,
     )
 
 
@@ -203,7 +207,7 @@ def code_message(message):
         )
     elif state == "already_booked":
         send_message(
-            chat_id, 
+            chat_id,
             "Per il codice fiscale inserito è già registrata una prenotazione.",
             "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
             "Per adesso non c'è altro che posso fare per te.",
@@ -401,7 +405,7 @@ def notify_locations(chat_id, verbose=False):
             "Prenotati su https://vaccinicovid.regione.veneto.it/",
             "Se riesci a vaccinarti, scrivi /vaccinato per non ricevere più notifiche.",
             "",
-            "<i>Per alcune categorie è richiesta l'autocertificazione.</i>"
+            "<i>Per alcune categorie è richiesta l'autocertificazione.</i>",
         )
         user["locations"] = available_locations
         user["last_message"] = now
@@ -417,13 +421,14 @@ def notify_locations(chat_id, verbose=False):
         )
         send_message(
             chat_id,
-            "Sedi disponibili:",
+            "<b>Sedi disponibili</b>",
             "",
             formatted_available,
             "",
-            "Prenotati su https://vaccinicovid.regione.veneto.it/",
+            '<a href="https://serenissimo.granzotto.net/#perch%C3%A9-ricevo-notifiche-per-categorie-a-cui-non-appartengo">Come funzionano le notifiche?</a>',
             "",
-            "<i>Per alcune categorie è richiesta l'autocertificazione.</i>"
+            "Prenotati su https://vaccinicovid.regione.veneto.it/ e ricorda che "
+            "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
         )
         user["locations"] = available_locations
         user["last_message"] = now
@@ -448,7 +453,7 @@ def should_check(chat_id):
     last_check = user.get("last_check", 0)
     delta = now - last_check
     return (
-        (state == "eligible" and delta > ELIGIBLE_DELTA)
+        (state is None or state == "eligible" and delta > ELIGIBLE_DELTA)
         or (state == "maybe_eligible" and delta > ELIGIBLE_DELTA)
         or (state == "not_eligible" and delta > NON_ELIGIBLE_DELTA)
         or (state == "already_booked" and delta > ALREADY_BOOKED_DELTA)
