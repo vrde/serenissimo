@@ -2,7 +2,6 @@
 
 .vscode
 db.json
-test_live.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
