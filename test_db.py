@@ -1,6 +1,7 @@
 from bot import load_db, save_db
-from agent import check, UnknownPayload, RecoverableException
+from agent import check, format_locations, UnknownPayload, RecoverableException
 from time import sleep
+from pprint import pprint
 
 def check_db():
     db = load_db()
@@ -19,13 +20,10 @@ def check_db():
             else:
                 print('  State:', state)
                 print('  Available:')
-                for l in available:
-                    print('    - ' + l)
+                print(format_locations(available, indent=4))
                 print('  Unavailable:')
-                for l in unavailable:
-                    print('    - ' + l)
-            input('Next? ')
-            #sleep(1)
+                print(format_locations(unavailable, indent=4))
+            sleep(1)
             print()
         del db[chat_id]
         save_db(db)

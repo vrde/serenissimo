@@ -14,6 +14,14 @@ Il bot nasce da un'esigenza personale. Mia madre deve prenotarsi per il vaccino 
  
 Mi sono chiesto: perché non invertire il paradigma? Perché non avvisare le persone quando si liberano posti per la vaccinazione, invece di fargli attivamente controllare la situazione? Questo vale soprattutto per le persone anziane, che spesso si affidano ai propri figli per usare questi sistemi.
 
+## Perché ricevo notifiche per categorie a cui non appartengo?
+
+Il portale della Regione non è in grado di effettuare la corrispondenza tra il codice fiscale e l'appartenenza o meno alle categorie a rischio. Questo significa che se appartieni a una categoria a rischio ma, una volta inserito il tuo codice fiscale, ricevi l'avviso che non sei tra gli aventi diritto, sta a te autocertificarti nel portale.
+
+Serenissimo si attiene alle informazioni ricavabili dal portale della Regione. Di conseguenza Serenissimo non può capire in automatico se appartieni a una specifica categoria e preferisce mostrarti tutti gli appuntamenti disponibili, lasciando a te la scelta della categoria di appartenenza.
+
+Se hai suggerimenti o proposte su come risolvere questo problema, scrivimi a <agranzot@mailbox.org>.
+
 ## Così privilegi le persone che sanno usare la tecnologia.
 
 No. Non ho costruito il bot per *saltare la fila*, fare i furbi o per privilegiare alcune categorie di persone piuttosto che altre. **Al contrario** il bot è pensato per rendere più accessibile il servizio di prenotazione, soprattutto per i meno esperti e per chi ha difficoltà a controllare ripetutamente lo stato delle prenotazioni.
@@ -32,14 +40,6 @@ Il bot **non crea un carico maggiore ai server** perché le richieste che fa son
 ## Perché devo inserire la ULSS quando hai già il mio codice fiscale?
 
 Il portale della Regione Veneto funziona così. Avevo pensato di chiedere solo il codice fiscale e "cercare" in tutte le 9 ULSS, ma questo avrebbe aumentato il numero di richieste del bot.
-
-## Serenissimo funziona?
-
-Sì. Ad oggi 19 aprile 2021, ore 14:00:
-
-- 1429 persone hanno inserito il proprio codice fiscale e ULSS di appartenenza.
-- Circa 100 rientrano nelle categorie che si possono vaccinare (il numero varia continuamente perché le categorie che hanno diritto al vaccino cambiano nel tempo). 
-- 26 hanno trovato posto e si sono vaccinate.
 
 ## Serenissimo può inviare SMS?
 
