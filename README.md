@@ -2,11 +2,11 @@
 
 ## Chi sei?
 
-Sono [Alberto Granzotto](https://www.granzotto.net/), libero professionista a Berlino. Mi occupo di servizi software, privacy, decentalizzazione. La mia email è <agranzot@mailbox.org>.
+Sono [Alberto Granzotto](https://www.granzotto.net/), libero professionista a Berlino. Mi occupo di servizi software, privacy, decentralizzazione. La mia email è <agranzot@mailbox.org>.
 
 ## Cos'è Serenissimo?
 
-Serenissimo è un bot (un assistente virtuale) che ti manda un messaggio sul telefono quando si liberano posti per il vaccino in Veneto. Puoi parlare con il bot tramite l'applicazione di messaggistica [Telegram](https://telegram.org/). Il bot ti chiede la ULSS di appartenenza e il tuo codice fiscale. Ottenuti i dati li memorizza e controlla periodicamente sul [sito ufficiale della Regione Veneto](vaccinicovid.regione.veneto.it/) i posti disponibili, se ce ne sono ti manda un messaggio.
+Serenissimo è un bot (un assistente virtuale) che ti manda un messaggio sul telefono quando si liberano posti per il vaccino in Veneto. Puoi parlare con il bot tramite l'applicazione di messaggistica [Telegram](https://telegram.org/). Il bot ti chiede la ULSS di appartenenza e il tuo codice fiscale. Ottenuti i dati li memorizza e controlla periodicamente sul [sito ufficiale della Regione Veneto](https://vaccinicovid.regione.veneto.it/) i posti disponibili, se ce ne sono ti manda un messaggio.
 
 ## Perché hai fatto Serenissimo?
 
