@@ -57,7 +57,8 @@ def check(cf, ulss):
     if url is None:
         return state, None, None
     else:
-        return state, *locations(session, url, ulss)
+        available, unavailable = locations(session, url, ulss)
+        return state, available, unavailable
 
 
 def locations(session, url, ulss, max_depth=5, html=None):
