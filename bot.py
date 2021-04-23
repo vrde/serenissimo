@@ -37,17 +37,29 @@ bot = telebot.TeleBot(TOKEN, parse_mode=None)
 
 
 def send_message(chat_id, *messages, reply_markup=None, parse_mode="HTML"):
-    bot.send_message(
-        chat_id,
-        "\n".join(messages),
-        reply_markup=reply_markup,
-        parse_mode=parse_mode,
-        disable_web_page_preview=True,
-    )
+    try:
+        bot.send_message(
+            chat_id,
+            "\n".join(messages),
+            reply_markup=reply_markup,
+            parse_mode=parse_mode,
+            disable_web_page_preview=True,
+        )
+    except apihelper.ApiTelegramException as e:
+        if e.error_code == 403:
+            # User blocked us, remove them
+            db.pop(chat_id, None)
+
 
 
 def reply_to(message, *messages):
-    bot.reply_to(message, "\n".join(messages))
+    try:
+        bot.reply_to(message, "\n".join(messages))
+    except apihelper.ApiTelegramException as e:
+        if e.error_code == 403:
+            # User blocked us, remove them
+            db.pop(message.chat.id, None)
+
 
 
 @bot.message_handler(commands=["start", "ricomincia"])
