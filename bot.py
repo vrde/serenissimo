@@ -403,7 +403,7 @@ def notify_locations(chat_id, sync=False):
         if state == "not_eligible":
             send_message(
                 chat_id,
-                # "<b>Mi metto al lavoro!</b>",
+                #"<b>Mi metto al lavoro!</b>",
                 # "<b>Non appartieni alle categorie che al momento possono prenotare.</b>",
                 "Ogni 4 ore controllerò se si liberano posti per {} nella ULSS {}. "
                 "<u>Ti notifico solo se ci sono novità.</u>".format(cf, ulss),
@@ -433,7 +433,7 @@ def notify_locations(chat_id, sync=False):
         else:
             send_message(
                 chat_id,
-                # "<b>Mi metto al lavoro!</b>",
+                #"<b>Mi metto al lavoro!</b>",
                 "Ogni ora controllerò se si liberano posti per {} nella ULSS {}. "
                 "<u>Ti notifico solo se ci sono novità.</u>".format(cf, ulss),
             )
@@ -454,8 +454,8 @@ def notify_locations(chat_id, sync=False):
             formatted_available,
             '<a href="https://serenissimo.granzotto.net/#perch%C3%A9-ricevo-notifiche-per-categorie-a-cui-non-appartengo">Come funzionano le notifiche?</a>',
             "",
-            'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
-            "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
+                'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
+                "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
         )
         user["locations"] = available_locations
         user["last_message"] = now
