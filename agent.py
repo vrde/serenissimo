@@ -61,7 +61,6 @@ def check(cf, ulss):
 
 
 def locations(session, url, ulss, max_depth=5, html=None):
-    # print(' '*(5-max_depth), url)
     if max_depth == 0:
         return None, None
 

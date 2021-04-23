@@ -182,7 +182,7 @@ def code_message(message):
         send_welcome(message)
         return
 
-    state, notified = notify_locations(chat_id)
+    state, notified = notify_locations(chat_id, verbose=True)
     if state == "not_eligible":
         send_message(
             chat_id,
@@ -367,11 +367,24 @@ def notify_locations(chat_id, verbose=False):
         except RecoverableException:
             if attempt == 3:
                 log.error("HTTP Error while checking chat_id %s", chat_id)
+                send_message(
+                    chat_id,
+                    "Errore: non riesco a contattare il portale della Regione. ",
+                    "Il problema è temporaneo, riprova tra qualche minuto.",
+                )
+                stack = traceback.format_exception(*sys.exc_info())
+                send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
                 return None, None
         except UnknownPayload:
             log.exeption("Error for chat_id %s, CF %s, ULSS %s", chat_id, cf, ulss)
             stack = traceback.format_exception(*sys.exc_info())
             send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
+            if verbose:
+                send_message(
+                    chat_id,
+                    "Errore: sembra che il portale della Regione sia cambiato. "
+                    "Cercherò di sistemare il problema al più presto.",
+                )
 
     old_locations = user.get("locations", [])
     formatted_available = format_locations(available_locations)
@@ -453,7 +466,8 @@ def should_check(chat_id):
     last_check = user.get("last_check", 0)
     delta = now - last_check
     return (
-        (state is None or state == "eligible" and delta > ELIGIBLE_DELTA)
+        (state is None and delta > ELIGIBLE_DELTA)
+        or (state == "eligible" and delta > ELIGIBLE_DELTA)
         or (state == "maybe_eligible" and delta > ELIGIBLE_DELTA)
         or (state == "not_eligible" and delta > NON_ELIGIBLE_DELTA)
         or (state == "already_booked" and delta > ALREADY_BOOKED_DELTA)
