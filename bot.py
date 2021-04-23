@@ -90,7 +90,7 @@ def send_welcome(message):
 )
 def check_message(message):
     chat_id = str(message.chat.id)
-    state, notified = notify_locations(chat_id, verbose=True)
+    state, notified = notify_locations(chat_id, sync=True)
 
 
 @bot.message_handler(commands=["cancella"])
@@ -182,7 +182,7 @@ def code_message(message):
         send_welcome(message)
         return
 
-    state, notified = notify_locations(chat_id, verbose=True)
+    state, notified = notify_locations(chat_id, sync=True)
     if state == "not_eligible":
         send_message(
             chat_id,
@@ -341,7 +341,7 @@ def save_db(db):
             json.dump(db.copy(), f, indent=2)
 
 
-def notify_locations(chat_id, verbose=False):
+def notify_locations(chat_id, sync=False):
     # Load user
     user = db.get(chat_id)
 
@@ -379,7 +379,7 @@ def notify_locations(chat_id, verbose=False):
             log.exeption("Error for chat_id %s, CF %s, ULSS %s", chat_id, cf, ulss)
             stack = traceback.format_exception(*sys.exc_info())
             send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
-            if verbose:
+            if sync:
                 send_message(
                     chat_id,
                     "Errore: sembra che il portale della Regione sia cambiato. "
@@ -395,7 +395,7 @@ def notify_locations(chat_id, verbose=False):
 
     log.info("Check chat_id %s, CF %s, ULSS %s, state %s", chat_id, cf, ulss, state)
 
-    if verbose:
+    if sync:
         log.info(
             "Notify Verbose chat_id %s, CF %s, ULSS %s, locations %s",
             chat_id,
