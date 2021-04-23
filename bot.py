@@ -31,12 +31,15 @@ load_dotenv()
 db_lock = Lock()
 
 
+DEV = os.getenv("DEV")
 ADMIN_ID = os.getenv("ADMIN_ID")
 TOKEN = os.getenv("TELEGRAM_TOKEN")
 bot = telebot.TeleBot(TOKEN, parse_mode=None)
 
 
 def send_message(chat_id, *messages, reply_markup=None, parse_mode="HTML"):
+    if DEV:
+        chat_id = ADMIN_ID
     try:
         bot.send_message(
             chat_id,
@@ -51,7 +54,6 @@ def send_message(chat_id, *messages, reply_markup=None, parse_mode="HTML"):
             db.pop(chat_id, None)
 
 
-
 def reply_to(message, *messages):
     try:
         bot.reply_to(message, "\n".join(messages))
@@ -59,7 +61,6 @@ def reply_to(message, *messages):
         if e.error_code == 403:
             # User blocked us, remove them
             db.pop(message.chat.id, None)
-
 
 
 @bot.message_handler(commands=["start", "ricomincia"])
@@ -88,7 +89,7 @@ def send_welcome(message):
         chat_id,
         "Ciao, me ciamo Serenissimo e i me gà programmà par darte na man coa prenotasiòn del vacino, queo anti-covid se intende.",
         "",
-        "Praticamente controeo ogni 30 minuti se ghe xe posto par prenotarte.",
+        "Praticamente controeo ogni ora se ghe xe posto par prenotarte.",
         "",
         "Per comunicazioni ufficiali riguardo ai vaccini controlla il sito https://vaccinicovid.regione.veneto.it/. "
         "Il bot è stato creato da Alberto Granzotto, per informazioni digita /info",
@@ -195,41 +196,6 @@ def code_message(message):
         return
 
     state, notified = notify_locations(chat_id, sync=True)
-    if state == "not_eligible":
-        send_message(
-            chat_id,
-            "Non appartieni alle categorie che attualmente possono prenotare.",
-            "Ogni 4 ore controllerò se si liberano posti per {} nella ULSS {} "
-            "<b>Ti notifico solo se ci sono novità.</b>".format(cf, ulss),
-        )
-    if state == "not_registered":
-        send_message(
-            chat_id,
-            "Il codice fiscale {} non risulta tra quelli "
-            "registrati presso la ULSS {}".format(cf, ulss),
-            "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
-            "Per adesso non c'è altro che posso fare per te.",
-        )
-    elif state == "already_vaccinated":
-        send_message(
-            chat_id,
-            "Per il codice fiscale inserito è già iniziato il percorso vaccinale.",
-            "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
-            "Per adesso non c'è altro che posso fare per te.",
-        )
-    elif state == "already_booked":
-        send_message(
-            chat_id,
-            "Per il codice fiscale inserito è già registrata una prenotazione.",
-            "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
-            "Per adesso non c'è altro che posso fare per te.",
-        )
-    else:
-        send_message(
-            chat_id,
-            "Ogni 30 minuti controllerò se si liberano posti per {} nella ULSS {} "
-            "<b>Ti notifico solo se ci sono novità.</b>".format(cf, ulss),
-        )
     send_message(chat_id, INFO_MESSAGE)
     send_stats()
     save_db(db)
@@ -409,31 +375,66 @@ def notify_locations(chat_id, sync=False):
 
     if sync:
         log.info(
-            "Notify Verbose chat_id %s, CF %s, ULSS %s, locations %s",
+            "Notify sync chat_id %s, CF %s, ULSS %s, state, %s, locations %s",
             chat_id,
             cf,
             ulss,
+            state,
             formatted_available,
         )
-        send_message(
-            chat_id,
-            "<b>Sedi disponibili:</b>",
-            "",
-            formatted_available or "Non ci sono risultati",
-            "",
-            "",
-            "<b>Sedi NON disponibili:</b>" "",
-            "",
-            formatted_unavailable or "Non ci sono risultati",
-            "",
-            "",
-            "Prenotati su https://vaccinicovid.regione.veneto.it/",
-            "Se riesci a vaccinarti, scrivi /vaccinato per non ricevere più notifiche.",
-            "",
-            "<i>Per alcune categorie è richiesta l'autocertificazione.</i>",
-        )
-        user["locations"] = available_locations
-        user["last_message"] = now
+        if formatted_available or formatted_unavailable:
+            send_message(
+                chat_id,
+                "<b>Sedi disponibili:</b>",
+                "",
+                formatted_available or "Non ci sono risultati\n",
+                "<b>Sedi NON disponibili:</b>" "",
+                "",
+                formatted_unavailable or "Non ci sono risultati\n",
+                'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
+                "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
+            )
+            user["locations"] = available_locations
+            user["last_message"] = now
+        if state == "not_eligible":
+            send_message(
+                chat_id,
+                #"<b>Mi metto al lavoro!</b>",
+                # "<b>Non appartieni alle categorie che al momento possono prenotare.</b>",
+                "Ogni 4 ore controllerò se si liberano "
+                "posti per {} nella ULSS {}.".format(cf, ulss),
+                "<u>Ti notifico solo se ci sono novità.</u>",
+            )
+        if state == "not_registered":
+            send_message(
+                chat_id,
+                "<b>Il codice fiscale {} non risulta tra quelli "
+                "registrati presso la ULSS {}.</b>".format(cf, ulss),
+                "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
+                "Per adesso non c'è altro che posso fare per te.",
+            )
+        elif state == "already_vaccinated":
+            send_message(
+                chat_id,
+                "<b>Per il codice fiscale inserito è già iniziato il percorso vaccinale.</b>",
+                "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
+                "Per adesso non c'è altro che posso fare per te.",
+            )
+        elif state == "already_booked":
+            send_message(
+                chat_id,
+                "<b>Per il codice fiscale inserito è già registrata una prenotazione.</b>",
+                "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
+                "Per adesso non c'è altro che posso fare per te.",
+            )
+        else:
+            send_message(
+                chat_id,
+                #"<b>Mi metto al lavoro!</b>",
+                "Ogni ora controllerò se si liberano "
+                "posti per {} nella ULSS {}.".format(cf, ulss),
+                "<u>Ti notifico solo se ci sono novità.</u>",
+            )
 
     # If something changed, we send all available locations to the user
     elif should_notify:
@@ -449,11 +450,10 @@ def notify_locations(chat_id, sync=False):
             "<b>Sedi disponibili</b>",
             "",
             formatted_available,
-            "",
             '<a href="https://serenissimo.granzotto.net/#perch%C3%A9-ricevo-notifiche-per-categorie-a-cui-non-appartengo">Come funzionano le notifiche?</a>',
             "",
-            "Prenotati su https://vaccinicovid.regione.veneto.it/ e ricorda che "
-            "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
+                'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
+                "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
         )
         user["locations"] = available_locations
         user["last_message"] = now
@@ -462,7 +462,7 @@ def notify_locations(chat_id, sync=False):
     return state, should_notify
 
 
-ELIGIBLE_DELTA = 30 * 60  # Wait 30 min for eligible
+ELIGIBLE_DELTA = 60 * 60  # Wait 60 min for eligible
 NON_ELIGIBLE_DELTA = 4 * 60 * 60  # Wait 4 hours for other categories
 ALREADY_BOOKED_DELTA = 24 * 60 * 60  # Wait 24 hours for already booked
 
@@ -487,7 +487,8 @@ def should_check(chat_id):
 
 
 def check_loop():
-    sleep(600)
+    if not DEV:
+        sleep(600)
     while True:
         c = Counter()
         start = time()
