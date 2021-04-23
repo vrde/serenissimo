@@ -345,24 +345,27 @@ def notify_locations(chat_id, sync=False):
         except RecoverableException:
             if attempt == 3:
                 log.error("HTTP Error while checking chat_id %s", chat_id)
-                send_message(
-                    chat_id,
-                    "Errore: non riesco a contattare il portale della Regione. ",
-                    "Il problema è temporaneo, riprova tra qualche minuto.",
-                )
                 stack = traceback.format_exception(*sys.exc_info())
                 send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
+                if sync:
+                    send_message(
+                        chat_id,
+                        "Errore: non riesco a contattare il portale della Regione. ",
+                        "Il problema è temporaneo, riprova tra qualche minuto.",
+                    )
                 return None, None
         except UnknownPayload:
-            log.exeption("Error for chat_id %s, CF %s, ULSS %s", chat_id, cf, ulss)
+            log.exception("Error for chat_id %s, CF %s, ULSS %s", chat_id, cf, ulss)
             stack = traceback.format_exception(*sys.exc_info())
             send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
             if sync:
                 send_message(
                     chat_id,
                     "Errore: sembra che il portale della Regione sia cambiato. "
-                    "Cercherò di sistemare il problema al più presto.",
+                    "Potrebbe essere una cosa temporanea, fai un paio di tentativi. "
+                    "Se il problema persiste cercherò di sistemarlo al più presto.",
                 )
+            return None, None
 
     old_locations = user.get("locations", [])
     formatted_available = format_locations(available_locations)
@@ -375,7 +378,7 @@ def notify_locations(chat_id, sync=False):
 
     if sync:
         log.info(
-            "Notify sync chat_id %s, CF %s, ULSS %s, state, %s, locations %s",
+            "Notify sync chat_id %s, CF %s, ULSS %s, state %s, locations %s",
             chat_id,
             cf,
             ulss,
@@ -388,9 +391,10 @@ def notify_locations(chat_id, sync=False):
                 "<b>Sedi disponibili:</b>",
                 "",
                 formatted_available or "Non ci sono risultati\n",
-                "<b>Sedi NON disponibili:</b>" "",
+                "<b>Sedi NON disponibili:</b>",
                 "",
                 formatted_unavailable or "Non ci sono risultati\n",
+                "",
                 'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
                 "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
             )
@@ -399,11 +403,10 @@ def notify_locations(chat_id, sync=False):
         if state == "not_eligible":
             send_message(
                 chat_id,
-                #"<b>Mi metto al lavoro!</b>",
+                # "<b>Mi metto al lavoro!</b>",
                 # "<b>Non appartieni alle categorie che al momento possono prenotare.</b>",
-                "Ogni 4 ore controllerò se si liberano "
-                "posti per {} nella ULSS {}.".format(cf, ulss),
-                "<u>Ti notifico solo se ci sono novità.</u>",
+                "Ogni 4 ore controllerò se si liberano posti per {} nella ULSS {}. "
+                "<u>Ti notifico solo se ci sono novità.</u>".format(cf, ulss),
             )
         if state == "not_registered":
             send_message(
@@ -430,10 +433,9 @@ def notify_locations(chat_id, sync=False):
         else:
             send_message(
                 chat_id,
-                #"<b>Mi metto al lavoro!</b>",
-                "Ogni ora controllerò se si liberano "
-                "posti per {} nella ULSS {}.".format(cf, ulss),
-                "<u>Ti notifico solo se ci sono novità.</u>",
+                # "<b>Mi metto al lavoro!</b>",
+                "Ogni ora controllerò se si liberano posti per {} nella ULSS {}. "
+                "<u>Ti notifico solo se ci sono novità.</u>".format(cf, ulss),
             )
 
     # If something changed, we send all available locations to the user
@@ -452,8 +454,8 @@ def notify_locations(chat_id, sync=False):
             formatted_available,
             '<a href="https://serenissimo.granzotto.net/#perch%C3%A9-ricevo-notifiche-per-categorie-a-cui-non-appartengo">Come funzionano le notifiche?</a>',
             "",
-                'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
-                "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
+            'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
+            "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
         )
         user["locations"] = available_locations
         user["last_message"] = now
