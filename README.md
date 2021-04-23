@@ -2,7 +2,7 @@
 
 ## Chi sei?
 
-Sono [Alberto Granzotto](https:///www.granzotto.net/), libero professionista a Berlino. Mi occupo di servizi software, privacy, blockchain. La mia email è agranzot@mailbox.org.
+Sono [Alberto Granzotto](https://www.granzotto.net/), libero professionista a Berlino. Mi occupo di servizi software, privacy, decentalizzazione. La mia email è <agranzot@mailbox.org>.
 
 ## Cos'è Serenissimo?
 
@@ -16,7 +16,7 @@ Mi sono chiesto: perché non invertire il paradigma? Perché non avvisare le per
 
 ## Perché ricevo notifiche per categorie a cui non appartengo?
 
-Il portale della Regione non è in grado di effettuare la corrispondenza tra il codice fiscale e l'appartenenza o meno alle categorie a rischio. Questo significa che se appartieni a una categoria a rischio ma, una volta inserito il tuo codice fiscale, ricevi l'avviso che non sei tra gli aventi diritto, sta a te autocertificarti nel portale.
+Il portale della Regione non effettua la corrispondenza tra il codice fiscale e l'appartenenza o meno alle categorie a rischio. Questo significa che se appartieni a una categoria a rischio ma, una volta inserito il tuo codice fiscale, ricevi l'avviso che non sei tra gli aventi diritto, sta a te autocertificarti nel portale.
 
 Serenissimo si attiene alle informazioni ricavabili dal portale della Regione. Di conseguenza Serenissimo non può capire in automatico se appartieni a una specifica categoria e preferisce mostrarti tutti gli appuntamenti disponibili, lasciando a te la scelta della categoria di appartenenza.
 
