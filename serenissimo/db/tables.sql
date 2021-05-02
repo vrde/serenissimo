@@ -52,9 +52,7 @@ SELECT user.id as user_id,
   subscription.locations
 FROM user
   INNER JOIN subscription ON (user.id = subscription.user_id)
-  LEFT JOIN status ON (status.id = subscription.status_id)
+  INNER JOIN status ON (status.id = subscription.status_id)
 WHERE subscription.ulss_id IS NOT NULL
   AND subscription.fiscal_code IS NOT NULL
-  AND (
-    subscription.last_check <= CAST(strftime('%s', 'now') AS INT) - status.update_interval
-  )
+  AND subscription.last_check <= CAST(strftime('%s', 'now') AS INT) - status.update_interval

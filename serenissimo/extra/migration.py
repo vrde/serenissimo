@@ -19,7 +19,7 @@ for k, v in json.load(open("./db.json")).items():
                     sid,
                     int(v["ulss"]),
                     v["cf"],
-                    v.get("state"),
+                    v.get("state", "unknown"),
                     int(v.get("last_check", 0)),
                     json.dumps(v.get("locations")),
                 ),
