@@ -1,18 +1,20 @@
 import unittest
 
-import agent
+from serenissimo import agent
 
 
 class TestStep1(unittest.TestCase):
-
     def test_step_1_parse__eligible(self):
         html = """<script>act_step(2,178)</script> """
-        state, url= agent.step_1_parse(html, 'XXXXXXXXXXXXXXXX', '0')
-        self.assertEqual(state, 'eligible')
-        self.assertEqual(url, 'https://vaccinicovid.regione.veneto.it/ulss0/azione/sceglisede/servizio/178')
+        state, url = agent.step_1_parse(html, "XXXXXXXXXXXXXXXX", "0")
+        self.assertEqual(state, "eligible")
+        self.assertEqual(
+            url,
+            "https://vaccinicovid.regione.veneto.it/ulss0/azione/sceglisede/servizio/178",
+        )
 
     def test_step_1_parse__not_registered(self):
-        html = '''
+        html = """
     
 
     <div class="alert alert-danger">
@@ -24,13 +26,16 @@ class TestStep1(unittest.TestCase):
 
     <script>toggolaelem();</script>
 
-        '''
+        """
         with self.assertRaises(agent.NotRegisteredError) as context:
-            agent.step_1_parse(html, 'XXXXXXXXXXXXXXXX', '0')
-        self.assertTrue('Il codice fiscale inserito non risulta tra quelli registrati presso questa ULSS' in str(context.exception))
-    
+            agent.step_1_parse(html, "XXXXXXXXXXXXXXXX", "0")
+        self.assertTrue(
+            "Il codice fiscale inserito non risulta tra quelli registrati presso questa ULSS"
+            in str(context.exception)
+        )
+
     def test_step_1_parse__already_vaccinated(self):
-        html = '''
+        html = """
 	<div class="alert alert-danger">
 		
 				Per il codice fiscale inserito &egrave; gi&agrave; iniziato il percorso vaccinale
@@ -39,13 +44,16 @@ class TestStep1(unittest.TestCase):
 	</div>
 	<div class="centera"><button class="btn btn-primary btn-back" onclick="act_step(1);" type="button"><i class="fas fa-undo"></i> Torna indietro</button></div>
 
-	<script>toggolaelem();</script>'''
+	<script>toggolaelem();</script>"""
         with self.assertRaises(agent.AlreadyVaccinatedError) as context:
-            agent.step_1_parse(html, 'XXXXXXXXXXXXXXXX', '0')
-        self.assertTrue('Per il codice fiscale inserito è già iniziato il percorso vaccinale' in str(context.exception))
+            agent.step_1_parse(html, "XXXXXXXXXXXXXXXX", "0")
+        self.assertTrue(
+            "Per il codice fiscale inserito è già iniziato il percorso vaccinale"
+            in str(context.exception)
+        )
 
     def test_step_1_parse__already_booked(self):
-        html='''
+        html = """
 	<div class="alert alert-danger">
 		
 				Per il codice fiscale inserito &egrave; gi&agrave; registrata una prenotazione.
@@ -53,16 +61,17 @@ class TestStep1(unittest.TestCase):
 	</div>
 	<div class="centera"><button class="btn btn-primary btn-back" onclick="act_step(1);" type="button"><i class="fas fa-undo"></i> Torna indietro</button></div>
 
-	<script>toggolaelem();</script>'''
+	<script>toggolaelem();</script>"""
 
         with self.assertRaises(agent.AlreadyBookedError) as context:
-            agent.step_1_parse(html, 'XXXXXXXXXXXXXXXX', '0')
-        self.assertTrue('Per il codice fiscale inserito è già registrata una prenotazione' in str(context.exception))
+            agent.step_1_parse(html, "XXXXXXXXXXXXXXXX", "0")
+        self.assertTrue(
+            "Per il codice fiscale inserito è già registrata una prenotazione"
+            in str(context.exception)
+        )
 
-
-    
     def test_step_1_parse__maybe_eligible(self):
-        html='''
+        html = """
 
     <div class="alert alert-danger">
         
@@ -77,10 +86,10 @@ class TestStep1(unittest.TestCase):
     <div class="centera"><button class="btn btn-primary btn-back" onclick="act_step(1);" type="button"><i class="fas fa-undo"></i> Torna indietro</button></div>
 
     <script>toggolaelem();</script>
-    '''
+    """
 
     def test_step_1_maybe_eligible(self):
-        html='''
+        html = """
 	<script>$('#t_des_1').html('<b>XXXXXXXXXXXXXXXX</b>');</script>
 	
 		<h2 class="centera">Selezionare la categoria per la quale si vuole autocertificarsi</h2>
@@ -90,18 +99,19 @@ class TestStep1(unittest.TestCase):
 				<button class="btn btn-primary btn-back" onclick="act_step(1);" type="button"><i class="fas fa-undo"></i> Torna a identificazione</button>
 				</div>
 				
-	<script>toggolaelem();</script>'''
+	<script>toggolaelem();</script>"""
 
-        options = agent.step_1_maybe_eligible(html, 'XXXXXXXXXXXXXXXX', 0)
+        options = agent.step_1_maybe_eligible(html, "XXXXXXXXXXXXXXXX", 0)
         self.assertDictEqual(
-            options, {
-                'Estremamente vulnerabili nati prima del 1951': 'https://vaccinicovid.regione.veneto.it/ulss0/azione/controllocf/corte/1105',
-                'Disabili gravi (L.104 art.3 c.3)': 'https://vaccinicovid.regione.veneto.it/ulss0/azione/controllocf/corte/1106'
-            }
+            options,
+            {
+                "Estremamente vulnerabili nati prima del 1951": "https://vaccinicovid.regione.veneto.it/ulss0/azione/controllocf/corte/1105",
+                "Disabili gravi (L.104 art.3 c.3)": "https://vaccinicovid.regione.veneto.it/ulss0/azione/controllocf/corte/1106",
+            },
         )
 
     def test_step_1_eligible(self):
-        html = '''
+        html = """
 
     
     <script>$('#t_des_1').html('<b>XXXXXXXXXXXXXXXX</b>');</script>
@@ -121,24 +131,23 @@ class TestStep1(unittest.TestCase):
 
     
 
-    '''
-        available, unavailable = agent.step_1_eligible(html, 'XXXXXXXXXXXXXXXX', 0)
+    """
+        available, unavailable = agent.step_1_eligible(html, "XXXXXXXXXXXXXXXX", 0)
         self.assertEqual(
-                available, [
-                    'Dolo PALAZZETTO DELLO SPORT Viale dello Sport 1, Dolo (VE)'
-               ])
+            available, ["Dolo PALAZZETTO DELLO SPORT Viale dello Sport 1, Dolo (VE)"]
+        )
         self.assertEqual(
-                unavailable, [
-                    'Chioggia ASPO  [DISPONIBILITA ESAURITA] Via Maestri del Lavoro 50, Chioggia (VE)',
-                    'Mirano BOCCIODROMO  [DISPONIBILITA ESAURITA] Via G. Matteotti 46, Mirano (VE)',
-                    'Venezia PALA EXPO  [DISPONIBILITA ESAURITA] Via Galileo Ferraris 5, Marghera  (VE)',
-                    'Venezia RAMPA SANTA CHIARA  [DISPONIBILITA ESAURITA] Rampa Santa Chiara, Venezia (ex Sede ACI)'
-                ]
-
+            unavailable,
+            [
+                "Chioggia ASPO  [DISPONIBILITA ESAURITA] Via Maestri del Lavoro 50, Chioggia (VE)",
+                "Mirano BOCCIODROMO  [DISPONIBILITA ESAURITA] Via G. Matteotti 46, Mirano (VE)",
+                "Venezia PALA EXPO  [DISPONIBILITA ESAURITA] Via Galileo Ferraris 5, Marghera  (VE)",
+                "Venezia RAMPA SANTA CHIARA  [DISPONIBILITA ESAURITA] Rampa Santa Chiara, Venezia (ex Sede ACI)",
+            ],
         )
 
     def test_step_1_maybe_eligible_cohort(self):
-        html = '''
+        html = """
 	<script>$('#t_des_1').html('<b>XXXXXXXXXXXXXXXX</b>');</script>
 	
 		<h2 class="centera">Selezionare la categoria per la quale si vuole autocertificarsi</h2>
@@ -149,9 +158,9 @@ class TestStep1(unittest.TestCase):
 				</div>
 				
 	<script>toggolaelem();</script>
-'''
+"""
         pass
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

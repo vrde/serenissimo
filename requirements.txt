@@ -1,5 +1,0 @@
-requests==2.25.1
-beautifulsoup4==4.9.3
-pyTelegramBotAPI==3.7.7
-python-codicefiscale==0.3.7
-python-dotenv==0.17.0

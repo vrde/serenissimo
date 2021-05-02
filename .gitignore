@@ -1,5 +1,8 @@
 # Custom paths
 
+*.sqlite*
+*.sqlite-shm
+*.sqlite-wal
 .vscode
 db.json
 

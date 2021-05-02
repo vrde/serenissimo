@@ -12,10 +12,10 @@ from time import sleep, time
 
 import telebot
 from codicefiscale import codicefiscale
-from dotenv import load_dotenv
 from telebot import apihelper, types
 
-from agent import (
+from . import db
+from .agent import (
     RecoverableException,
     UnknownPayload,
     check,
@@ -23,12 +23,7 @@ from agent import (
     format_state,
 )
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
 log = logging.getLogger()
-load_dotenv()
-db_lock = Lock()
 
 
 DEV = os.getenv("DEV")
@@ -37,30 +32,37 @@ TOKEN = os.getenv("TELEGRAM_TOKEN")
 bot = telebot.TeleBot(TOKEN, parse_mode=None)
 
 
-def send_message(chat_id, *messages, reply_markup=None, parse_mode="HTML"):
+def send_message(telegram_id, *messages, reply_markup=None, parse_mode="HTML"):
     if DEV:
-        chat_id = ADMIN_ID
+        telegram_id = ADMIN_ID
     try:
         bot.send_message(
-            chat_id,
+            telegram_id,
             "\n".join(messages),
             reply_markup=reply_markup,
             parse_mode=parse_mode,
             disable_web_page_preview=True,
         )
     except apihelper.ApiTelegramException as e:
+        # User blocked us, remove them
         if e.error_code == 403:
-            # User blocked us, remove them
-            db.pop(chat_id, None)
+            with db.transaction() as t:
+                user = db.user.by_telegram_id(t, telegram_id)
+                if user:
+                    db.user.delete(t, user["id"])
 
 
 def reply_to(message, *messages):
+    telegram_id = str(message.chat.id)
     try:
         bot.reply_to(message, "\n".join(messages))
     except apihelper.ApiTelegramException as e:
+        # User blocked us, remove them
         if e.error_code == 403:
-            # User blocked us, remove them
-            db.pop(message.chat.id, None)
+            with db.transaction() as t:
+                user = db.user.by_telegram_id(t, telegram_id)
+                if user:
+                    db.user.delete(t, user["id"])
 
 
 @bot.message_handler(commands=["start", "ricomincia"])
@@ -68,10 +70,15 @@ def reply_to(message, *messages):
     func=lambda message: message.text and message.text.strip().lower() == "ricomincia"
 )
 def send_welcome(message):
-    chat_id = str(message.chat.id)
-    if chat_id in db:
-        del db[chat_id]
-        save_db(db)
+    telegram_id = str(message.chat.id)
+
+    # Remove all previous data
+    with db.transaction() as t:
+        user = db.user.by_telegram_id(t, telegram_id)
+        if user:
+            db.user.delete(t, user["id"])
+        db.user.insert(t, telegram_id)
+
     markup = types.ReplyKeyboardMarkup(row_width=2)
     buttons = [
         types.KeyboardButton("ULSS1 Dolomiti"),
@@ -86,7 +93,7 @@ def send_welcome(message):
     ]
     markup.add(*buttons)
     send_message(
-        chat_id,
+        telegram_id,
         "Ciao, me ciamo Serenissimo e i me gà programmà par darte na man coa prenotasiòn del vacino, queo anti-covid se intende.",
         "",
         "Praticamente controeo ogni ora se ghe xe posto par prenotarte.",
@@ -94,75 +101,41 @@ def send_welcome(message):
         "Per comunicazioni ufficiali riguardo ai vaccini controlla il sito https://vaccinicovid.regione.veneto.it/. "
         "Il bot è stato creato da Alberto Granzotto, per informazioni digita /info",
     )
-    send_message(chat_id, "Seleziona la tua ULSS 👇", reply_markup=markup)
-
-
-@bot.message_handler(commands=["controlla"])
-@bot.message_handler(
-    func=lambda message: message.text and message.text.strip().lower() == "controlla"
-)
-def check_message(message):
-    chat_id = str(message.chat.id)
-    state, notified = notify_locations(chat_id, sync=True)
-
-
-@bot.message_handler(commands=["cancella"])
-@bot.message_handler(
-    func=lambda message: message.text and message.text.strip().lower() == "cancella"
-)
-def delete_message(message):
-    chat_id = str(message.chat.id)
-    if chat_id in db:
-        del db[chat_id]
-        save_db(db)
-    send_message(
-        chat_id,
-        "Ho cancellato i tuoi dati, non riceverai più nessuna notifica.",
-        "Se vuoi ricominciare digita /ricomincia",
-    )
-
-
-@bot.message_handler(commands=["vaccinato"])
-@bot.message_handler(
-    func=lambda message: message.text and message.text.strip().lower() == "vaccinato"
-)
-def vaccinated_message(message):
-    chat_id = str(message.chat.id)
-    send_message(
-        chat_id,
-        "🎉 Complimenti! 🎉",
-        "",
-        "Ho cancellato i tuoi dati, non riceverai più nessuna notifica.",
-        "Se vuoi ricominciare digita /ricomincia",
-    )
-    if chat_id in db:
-        cf = db[chat_id].get("cf")
-        if cf:
-            hash = sha256(cf.encode("utf-8")).hexdigest()
-            db["vaccinated:" + hash] = {"vaccinated": True}
-        del db[chat_id]
-        save_db(db)
-        send_stats()
+    send_message(telegram_id, "Seleziona la tua ULSS 👇", reply_markup=markup)
 
 
 @bot.message_handler(regexp="^ULSS[1-9] .+$")
 def ulss_message(message):
-    chat_id = str(message.chat.id)
-    ulss = message.text.split()[0][-1]
-    db[chat_id] = {
-        "chat_id": chat_id,
-        "ulss": ulss,
-    }
+    telegram_id = str(message.chat.id)
+    ulss_id = int(message.text.split()[0][-1])
+
+    with db.transaction() as t:
+        user = db.user.by_telegram_id(t, telegram_id)
+        if user:
+            # Load the last subscription
+            subscription = db.subscription.last_by_user(t, user["id"])
+
+            # If there is one but it's incomplete, update it.
+            if subscription and (
+                not subscription["ulss_id"] or not subscription["fiscal_code"]
+            ):
+                db.subscription.update(t, subscription["id"], ulss_id=ulss_id)
+            # If there isn't one or the one we loaded is complete, create a new one.
+            else:
+                db.subscription.insert(t, user["id"], ulss_id=ulss_id)
+
+    if not user:
+        return send_welcome(message)
+
     markup = types.ReplyKeyboardRemove(selective=False)
     send_message(
-        chat_id,
+        telegram_id,
         "Oro benon. Ultimo passo, mandami il tuo codice fiscale 👇",
         reply_markup=markup,
     )
-    save_db(db)
 
 
-def clean_cf(s):
+def clean_fiscal_code(s):
     return "".join(s.split()).upper()
 
 
@@ -177,28 +150,87 @@ INFO_MESSAGE = "\n".join(
 
 
 @bot.message_handler(
-    func=lambda message: message.text and codicefiscale.is_valid(clean_cf(message.text))
+    func=lambda message: message.text
+    and codicefiscale.is_valid(clean_fiscal_code(message.text))
 )
-def code_message(message):
-    cf = clean_cf(message.text)
-    chat_id = str(message.chat.id)
+def fiscal_code_message(message):
+    fiscal_code = clean_fiscal_code(message.text)
+    telegram_id = str(message.chat.id)
 
-    if chat_id not in db:
-        send_welcome(message)
-        return
+    with db.transaction() as t:
+        user = db.user.by_telegram_id(t, telegram_id)
+        if user:
+            subscription = db.subscription.last_by_user(t, user["id"])
+            if (
+                subscription
+                and subscription["ulss_id"]
+                and not subscription["fiscal_code"]
+            ):
+                # We do a sync check for locations right after. To avoid
+                # overlapping with the worker (that might pick up this
+                # subscription as well) we set the last check to now.
+                db.subscription.update(
+                    t, subscription["id"], fiscal_code=fiscal_code, set_last_check=True
+                )
 
-    db[chat_id]["cf"] = cf
-    save_db(db)
-    ulss = db[chat_id].get("ulss")
+    if not user or not subscription or not subscription["ulss_id"]:
+        return send_welcome(message)
 
-    if not ulss:
-        send_welcome(message)
-        return
-
-    state, notified = notify_locations(chat_id, sync=True)
-    send_message(chat_id, INFO_MESSAGE)
+    state, notified = notify_locations(subscription["id"], sync=True)
+    send_message(telegram_id, INFO_MESSAGE)
     send_stats()
-    save_db(db)
+
+
+@bot.message_handler(commands=["controlla"])
+@bot.message_handler(
+    func=lambda message: message.text and message.text.strip().lower() == "controlla"
+)
+def check_message(message):
+    telegram_id = str(message.chat.id)
+    with db.connection() as c:
+        user = db.user.by_telegram_id(c, telegram_id)
+        subscription = db.subscription.last_by_user(c, user["id"])
+    if subscription:
+        state, notified = notify_locations(subscription["id"], sync=True)
+    else:
+        send_welcome(message)
+
+
+@bot.message_handler(commands=["cancella"])
+@bot.message_handler(
+    func=lambda message: message.text and message.text.strip().lower() == "cancella"
+)
+def delete_message(message):
+    telegram_id = str(message.chat.id)
+    with db.transaction() as t:
+        user = db.user.by_telegram_id(t, telegram_id)
+        if user:
+            db.user.delete(t, user["id"])
+    send_message(
+        telegram_id,
+        "Ho cancellato i tuoi dati, non riceverai più nessuna notifica.",
+        "Se vuoi ricominciare digita /ricomincia",
+    )
+
+
+@bot.message_handler(commands=["vaccinato"])
+@bot.message_handler(
+    func=lambda message: message.text and message.text.strip().lower() == "vaccinato"
+)
+def vaccinated_message(message):
+    telegram_id = str(message.chat.id)
+    with db.transaction() as t:
+        user = db.user.by_telegram_id(t, telegram_id)
+        if user:
+            db.user.delete(t, user["id"])
+            db.log("vaccinated")
+    send_message(
+        telegram_id,
+        "🎉 Complimenti! 🎉",
+        "",
+        "Ho cancellato i tuoi dati, non riceverai più nessuna notifica.",
+        "Se vuoi ricominciare digita /ricomincia",
+    )
 
 
 @bot.message_handler(commands=["info", "informazioni", "aiuto", "privacy"])
@@ -229,28 +261,15 @@ def send_info(message):
     )
 
 
-#########
-# ADMIN #
-#########
-
-
 def from_admin(message):
     return ADMIN_ID == str(message.chat.id)
 
 
 def send_stats():
-    c = Counter({"people": 0, "vaccinated": 0, "registered": 0})
-    for k, v in db.copy().items():
-        c["people"] += 1
-        if k.startswith("vaccinated"):
-            c["vaccinated"] += 1
-        if v.get("cf"):
-            c["registered"] += 1
+    stats = db.stats.select(db.connect())
     send_message(
         ADMIN_ID,
-        "People: {people}\nRegistered: {registered}\nVaccinated: {vaccinated}".format(
-            **c
-        ),
+        "Subscribers: {users}\nVaccinated: {vaccinated}".format(**stats),
     )
 
 
@@ -262,31 +281,21 @@ def stats_message(message):
 
 @bot.message_handler(commands=["broadcast"])
 def broadcast_message(message):
-    if from_admin(message):
-        c = Counter()
-        start = time()
-        chat_ids = list(db.copy().keys())
-        text = message.text[11:]
-        if not text:
-            return
-        for chat_id in chat_ids:
-            user = db.get(chat_id, {})
-            cf = user.get("cf")
-            ulss = user.get("ulss")
-            if not cf or not ulss:
-                continue
-            c["total"] += 1
-            log.info("Broadcast message to %s", chat_id)
-            try:
-                send_message(chat_id, text)
-            except Exception as e:
-                stack = traceback.format_exception(*sys.exc_info())
-                send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
-                print("".join(stack))
-        end = time()
-        send_message(
-            ADMIN_ID, "Sent {} messages in {:.2f}s".format(c["total"], end - start)
-        )
+    if not from_admin(message):
+        return
+    text = message.text[11:]
+    if not text:
+        return
+    total = 0
+    start = time()
+    with db.connection() as c:
+        for user in db.users.select_active(c):
+            total += 1
+            telegram_id = user["telegram_id"]
+            log.info("Broadcast message to %s", telegram_id)
+            send_message(telegram_id, text)
+    end = time()
+    send_message(ADMIN_ID, f"Sent {total} messages in {end-start:.2}s")
 
 
 @bot.message_handler(func=lambda message: True)
@@ -300,94 +309,88 @@ def fallback_message(message):
     )
 
 
-######
-# DB #
-######
+def notify_locations(subscription_id, sync=False):
+    with db.connection() as c:
+        s = db.subscription.by_id(c, subscription_id)
 
-
-def load_db():
-    try:
-        with open("db.json", "r") as f:
-            return json.load(f)
-    except FileNotFoundError:
-        return {}
-
-
-def save_db(db):
-    with db_lock:
-        with open("db.json", "w") as f:
-            json.dump(db.copy(), f, indent=2)
-
-
-def notify_locations(chat_id, sync=False):
-    # Load user
-    user = db.get(chat_id)
-
-    # Check if user exists
-    if not user:
+    if not s or not s["ulss_id"] or not s["fiscal_code"]:
         return None, None
 
-    cf = user.get("cf")
-    ulss = user.get("ulss")
-    state = user.get("state")
-    now = time()
-
-    # Check if user has all fields required to book an appointment
-    if not cf or not ulss:
-        return None, None
+    telegram_id = s["telegram_id"]
+    fiscal_code = s["fiscal_code"]
+    ulss_id = s["ulss_id"]
+    old_locations = json.loads(s["locations"])
 
     attempt = 0
     while True:
         attempt += 1
         try:
-            state, available_locations, unavailable_locations = check(cf, ulss)
+            status_id, available_locations, unavailable_locations = check(
+                fiscal_code, ulss_id
+            )
             break
         except RecoverableException:
             if attempt == 3:
-                log.error("HTTP Error while checking chat_id %s", chat_id)
+                log.error(
+                    "HTTP Error for telegram_id %s, ulss_id %s, fiscal_code %s",
+                    telegram_id,
+                    ulss_id,
+                    fiscal_code,
+                )
                 stack = traceback.format_exception(*sys.exc_info())
                 send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
                 if sync:
                     send_message(
-                        chat_id,
+                        telegram_id,
                         "Errore: non riesco a contattare il portale della Regione. ",
                         "Il problema è temporaneo, riprova tra qualche minuto.",
                     )
                 return None, None
         except UnknownPayload:
-            log.exception("Error for chat_id %s, CF %s, ULSS %s", chat_id, cf, ulss)
+            log.exception(
+                "Payload Error for telegram_id %s, ulss_id %s, fiscal_code %s",
+                telegram_id,
+                ulss_id,
+                fiscal_code,
+            )
             stack = traceback.format_exception(*sys.exc_info())
             send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
             if sync:
                 send_message(
-                    chat_id,
+                    telegram_id,
                     "Errore: sembra che il portale della Regione sia cambiato. "
                     "Potrebbe essere una cosa temporanea, fai un paio di tentativi. "
                     "Se il problema persiste cercherò di sistemarlo al più presto.",
                 )
             return None, None
 
-    old_locations = user.get("locations", [])
     formatted_available = format_locations(available_locations)
     formatted_unavailable = format_locations(unavailable_locations)
     formatted_old = format_locations(old_locations)
 
     should_notify = formatted_available != formatted_old and available_locations
 
-    log.info("Check chat_id %s, CF %s, ULSS %s, state %s", chat_id, cf, ulss, state)
+    log.info(
+        "Check telegram_id %s, CF %s, ULSS %s, state %s",
+        telegram_id,
+        fiscal_code,
+        ulss_id,
+        status_id,
+    )
 
     if sync:
         log.info(
-            "Notify sync chat_id %s, CF %s, ULSS %s, state %s, locations %s",
-            chat_id,
-            cf,
-            ulss,
-            state,
+            "Notify sync telegram_id %s, CF %s, ULSS %s, state %s, locations %s",
+            telegram_id,
+            fiscal_code,
+            ulss_id,
+            status_id,
             formatted_available,
         )
+
         if formatted_available or formatted_unavailable:
             send_message(
-                chat_id,
+                telegram_id,
                 "<b>Sedi disponibili:</b>",
                 "",
                 formatted_available or "Non ci sono risultati\n",
@@ -398,54 +401,52 @@ def notify_locations(chat_id, sync=False):
                 'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
                 "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
             )
-            user["locations"] = available_locations
-            user["last_message"] = now
-        if state == "not_eligible":
+
+        if status_id == "not_eligible":
             send_message(
-                chat_id,
-                "Ogni 4 ore controllerò se si liberano posti per {} nella ULSS {}. "
-                "<u>Ti notifico solo se ci sono novità.</u>".format(cf, ulss),
+                telegram_id,
+                f"Ogni 4 ore controllerò se si liberano posti per {fiscal_code} nella ULSS {ulss_id}. "
+                "<u>Ti notifico solo se ci sono novità.</u>",
             )
-        if state == "not_registered":
+        if status_id == "not_registered":
             send_message(
-                chat_id,
-                "<b>Il codice fiscale {} non risulta tra quelli "
-                "registrati presso la ULSS {}.</b>".format(cf, ulss),
+                telegram_id,
+                f"<b>Il codice fiscale {fiscal_code} non risulta tra quelli registrati presso la ULSS {ulss_id}.</b>",
                 "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
                 "Per adesso non c'è altro che posso fare per te.",
             )
-        elif state == "already_vaccinated":
+        elif status_id == "already_vaccinated":
             send_message(
-                chat_id,
+                telegram_id,
                 "<b>Per il codice fiscale inserito è già iniziato il percorso vaccinale.</b>",
                 "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
                 "Per adesso non c'è altro che posso fare per te.",
             )
-        elif state == "already_booked":
+        elif status_id == "already_booked":
             send_message(
-                chat_id,
+                telegram_id,
                 "<b>Per il codice fiscale inserito è già registrata una prenotazione.</b>",
                 "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
                 "Per adesso non c'è altro che posso fare per te.",
             )
         else:
             send_message(
-                chat_id,
-                "Ogni ora controllerò se si liberano posti per {} nella ULSS {}. "
-                "<u>Ti notifico solo se ci sono novità.</u>".format(cf, ulss),
+                telegram_id,
+                f"Ogni ora controllerò se si liberano posti per {fiscal_code} nella ULSS {ulss_id}. "
+                "<u>Ti notifico solo se ci sono novità.</u>",
             )
 
     # If something changed, we send all available locations to the user
     elif should_notify:
         log.info(
             "Notify chat_id %s, CF %s, ULSS %s, locations %s",
-            chat_id,
-            cf,
-            ulss,
+            telegram_id,
+            fiscal_code,
+            ulss_id,
             formatted_available,
         )
         send_message(
-            chat_id,
+            telegram_id,
             "<b>Sedi disponibili</b>",
             "",
             formatted_available,
@@ -454,85 +455,54 @@ def notify_locations(chat_id, sync=False):
             'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
             "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
         )
-        user["locations"] = available_locations
-        user["last_message"] = now
-    user["state"] = state
-    user["last_check"] = now
-    return state, should_notify
-
-
-ELIGIBLE_DELTA = 60 * 60  # Wait 60 min for eligible
-NON_ELIGIBLE_DELTA = 4 * 60 * 60  # Wait 4 hours for other categories
-ALREADY_BOOKED_DELTA = 24 * 60 * 60  # Wait 24 hours for already booked
-
-
-def should_check(chat_id):
-    user = db.get(chat_id, {})
-    cf = user.get("cf")
-    ulss = user.get("ulss")
-    if not user or not cf or not ulss:
-        return False
-    now = time()
-    state = user.get("state")
-    last_check = user.get("last_check", 0)
-    delta = now - last_check
-    return (
-        (state is None and delta > ELIGIBLE_DELTA)
-        or (state == "eligible" and delta > ELIGIBLE_DELTA)
-        or (state == "maybe_eligible" and delta > ELIGIBLE_DELTA)
-        or (state == "not_eligible" and delta > NON_ELIGIBLE_DELTA)
-        or (state == "already_booked" and delta > ALREADY_BOOKED_DELTA)
-    )
+    with db.transaction() as t:
+        db.subscription.update(
+            t,
+            subscription_id,
+            status_id=status_id,
+            locations=json.dumps(available_locations),
+            set_last_check=True,
+        )
+    return status_id, should_notify
 
 
 def check_loop():
     if not DEV:
         sleep(600)
     while True:
-        c = Counter()
+        stats = Counter()
         start = time()
-        chat_ids = list(db.copy().keys())
-        shuffle(chat_ids)
-        for chat_id in chat_ids:
-            if not should_check(chat_id):
-                continue
-            c["total"] += 1
-            try:
-                state, notified = notify_locations(chat_id)
-                if state:
-                    c[state] += 1
-                    if notified:
-                        c["success"] += 1
-                        save_db(db)
-            except KeyboardInterrupt:
-                sys.exit()
-            except Exception as e:
-                stack = traceback.format_exception(*sys.exc_info())
-                send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
-                print("".join(stack))
+        with db.connection() as c:
+            for s in db.subscription.select_stale(c):
+                stats["total"] += 1
+                state, notified = notify_locations(s["subscription_id"])
+                stats[state] += 1
+                if notified:
+                    stats["notified"] += 1
+                    with db.transaction() as t:
+                        db.log.insert(t, "notification", s["ulss_id"])
         end = time()
-        save_db(db)
-        if c["total"] > 0:
+        if stats["total"] > 0:
             send_message(
                 ADMIN_ID,
                 "🏁 Done checking for locations",
-                "\n".join("{} {}".format(k, v) for k, v in c.items()),
-                "Total time: {:.2f}s".format(end - start),
+                "\n".join(f"{k} {v}" for k, v in stats.items()),
+                f"Total time: {end-start:.2f}s",
             )
-        sleep(600)
+        sleep(1)
+        # sleep(600)
 
-
-db = load_db()
-save_db(db)
 
 if __name__ == "__main__":
     log.info("Start Serenissimo bot, viva el doge, viva el mar!")
+    with db.transaction() as t:
+        db.init(t)
+        db.init_data(t)
     Thread(target=check_loop, daemon=True).start()
     apihelper.SESSION_TIME_TO_LIVE = 5 * 60
     try:
         bot.polling()
     except KeyboardInterrupt:
-        print("Ciao")
         sys.exit()
     except Exception as e:
         stack = traceback.format_exception(*sys.exc_info())
