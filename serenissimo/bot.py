@@ -470,7 +470,7 @@ def notify_locations(subscription_id, sync=False):
 
 def check_loop():
     if not DEV:
-        sleep(600)
+        sleep(60)
     while True:
         stats = Counter()
         start = time()
@@ -491,8 +491,7 @@ def check_loop():
                 "\n".join(f"{k} {v}" for k, v in stats.items()),
                 f"Total time: {end-start:.2f}s",
             )
-        sleep(1)
-        # sleep(600)
+        sleep(60)
 
 
 if __name__ == "__main__":
