@@ -45,6 +45,7 @@ def send_message(telegram_id, *messages, reply_markup=None, parse_mode="HTML"):
         )
     except apihelper.ApiTelegramException as e:
         # User blocked us, remove them
+        log.info("User %s blocked us, delete all their data", telegram_id)
         if e.error_code == 403:
             with db.transaction() as t:
                 user = db.user.by_telegram_id(t, telegram_id)
@@ -58,6 +59,7 @@ def reply_to(message, *messages):
         bot.reply_to(message, "\n".join(messages))
     except apihelper.ApiTelegramException as e:
         # User blocked us, remove them
+        log.info("User %s blocked us, delete all their data", telegram_id)
         if e.error_code == 403:
             with db.transaction() as t:
                 user = db.user.by_telegram_id(t, telegram_id)
@@ -223,7 +225,7 @@ def vaccinated_message(message):
         user = db.user.by_telegram_id(t, telegram_id)
         if user:
             db.user.delete(t, user["id"])
-            db.log("vaccinated")
+            db.log.insert(t, "vaccinated")
     send_message(
         telegram_id,
         "🎉 Complimenti! 🎉",
@@ -289,7 +291,7 @@ def broadcast_message(message):
     total = 0
     start = time()
     with db.connection() as c:
-        for user in db.users.select_active(c):
+        for user in db.user.select_active(c):
             total += 1
             telegram_id = user["telegram_id"]
             log.info("Broadcast message to %s", telegram_id)
