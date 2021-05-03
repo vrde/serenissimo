@@ -26,10 +26,17 @@ URL_ULSS = URL_ROOT + "/ulss{}"
 URL_COHORT_CHOOSE = URL_ULSS + "/azione/sceglicorte/"
 URL_COHORT_SELECT = URL_ULSS + "/azione/controllocf/corte/{}"
 URL_SERVICE = URL_ULSS + "/azione/sceglisede/servizio/{}"
-URL_CHECK = URL_ULSS + '/azione/controllocf'
+URL_CHECK = URL_ULSS + "/azione/controllocf"
 
 
 def check(cf, ulss):
+    try:
+        return _check(cf, ulss)
+    except requests.exceptions.RequestException:
+        raise AgentHTTPException()
+
+
+def _check(cf, ulss):
     session = requests.Session()
     data = {"cod_fiscale": cf}
 
@@ -209,13 +216,14 @@ def format_locations(locations, indent=0):
 
 
 STATE_TO_LABEL = {
-    'eligible': 'Puoi prenotarti per il vaccino',
-    'not_eligible': 'Non puoi ancora prenotarti per il vaccino',
-    'maybe_eligible': 'Puoi prenotarti per il vaccino solo se sei in una categoria speciale',
-    'not_registered': 'Il tuo Codice Fiscale non appartiene alla ULSS che hai specificato',
-    'already_vaccinated': 'Sei già stato vaccinato',
-    'already_booked': 'Hai già prenotato il vaccino'
+    "eligible": "Puoi prenotarti per il vaccino",
+    "not_eligible": "Non puoi ancora prenotarti per il vaccino",
+    "maybe_eligible": "Puoi prenotarti per il vaccino solo se sei in una categoria speciale",
+    "not_registered": "Il tuo Codice Fiscale non appartiene alla ULSS che hai specificato",
+    "already_vaccinated": "Sei già stato vaccinato",
+    "already_booked": "Hai già prenotato il vaccino",
 }
+
 
 def format_state(state):
     return STATE_TO_LABEL[state]
