@@ -45,7 +45,7 @@ def send_message(telegram_id, *messages, reply_markup=None, parse_mode="HTML"):
             disable_web_page_preview=True,
         )
     except apihelper.ApiTelegramException as e:
-        log.exception()
+        log.exception("Error sending message %s", "\n".join(messages))
         if e.error_code == 403:
             # User blocked us, remove them
             log.info("User %s blocked us, delete all their data", telegram_id)
@@ -60,7 +60,7 @@ def reply_to(message, *messages):
     try:
         bot.reply_to(message, "\n".join(messages))
     except apihelper.ApiTelegramException as e:
-        log.exception()
+        log.exception("Error sending message %s", "\n".join(messages))
         if e.error_code == 403:
             # User blocked us, remove them
             log.info("User %s blocked us, delete all their data", telegram_id)
@@ -440,10 +440,15 @@ def notify_locations(subscription_id, sync=False):
                 "<b>Sedi disponibili:</b>",
                 "",
                 formatted_available or "Non ci sono risultati\n",
+            )
+            send_message(
+                telegram_id,
                 "<b>Sedi NON disponibili:</b>",
                 "",
                 formatted_unavailable or "Non ci sono risultati\n",
-                "",
+            )
+            send_message(
+                telegram_id,
                 'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
                 "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
             )
