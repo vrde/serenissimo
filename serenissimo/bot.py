@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import sys
+import re
 import traceback
 from collections import Counter
 from datetime import datetime
@@ -132,7 +133,7 @@ def ulss_message(message):
     markup = types.ReplyKeyboardRemove(selective=False)
     send_message(
         telegram_id,
-        "Oro benon. Ultimo passo, mandami il tuo codice fiscale 👇",
+        "Oro benòn. Mandami il tuo codice fiscale 👇",
         reply_markup=markup,
     )
 
@@ -141,13 +142,10 @@ def clean_fiscal_code(s):
     return "".join(s.split()).upper()
 
 
-INFO_MESSAGE = "\n".join(
-    [
-        "Per cambiare Codice Fiscale o ULSS, digita /ricomincia",
-        "Per cancellarti, digita /cancella",
-        "Se vuoi più informazioni o vuoi segnalare un errore, digita /info",
-        "Per informazioni ufficiali https://vaccinicovid.regione.veneto.it/",
-    ]
+INFO_MESSAGE = (
+    "- Per ricominciare digita /ricomincia",
+    "- Per cancellarti digita /cancella",
+    "- Se vuoi più informazioni o vuoi segnalare un errore digita /info",
 )
 
 
@@ -178,8 +176,51 @@ def fiscal_code_message(message):
     if not user or not subscription or not subscription["ulss_id"]:
         return send_welcome(message)
 
-    state, notified = notify_locations(subscription["id"], sync=True)
-    send_message(telegram_id, INFO_MESSAGE)
+    markup = types.ReplyKeyboardRemove(selective=False)
+    send_message(
+        telegram_id,
+        "Ultimo sforso! Mandami le <u>ultime sei cifre</u> della tua tessera sanitaria 👇",
+        reply_markup=markup,
+    )
+
+
+def clean_health_insurance_number(text):
+    if text:
+        text = text.replace(" ", "")
+        if re.match("^\d{6}$", text):
+            return text
+
+
+@bot.message_handler(func=lambda m: clean_health_insurance_number(m.text))
+def health_insurance_number_message(message):
+    health_insurance_number = clean_health_insurance_number(message.text)
+    telegram_id = str(message.chat.id)
+
+    with db.transaction() as t:
+        user = db.user.by_telegram_id(t, telegram_id)
+        if user:
+            subscription = db.subscription.last_by_user(t, user["id"])
+            if subscription and subscription["ulss_id"] and subscription["fiscal_code"]:
+                # We do a sync check for locations right after. To avoid
+                # overlapping with the worker (that might pick up this
+                # subscription as well) we set the last check to now.
+                db.subscription.update(
+                    t,
+                    subscription["id"],
+                    health_insurance_number=health_insurance_number,
+                    set_last_check=True,
+                )
+
+    if (
+        not user
+        or not subscription
+        or not subscription["ulss_id"]
+        or not subscription["fiscal_code"]
+    ):
+        return send_welcome(message)
+
+    state_id, notified = notify_locations(subscription["id"], sync=True)
+    # send_message(telegram_id, INFO_MESSAGE)
     send_stats()
 
 
@@ -256,6 +297,7 @@ def send_info(message):
         "- Nel database i dati memorizzati sono:",
         "    - Il tuo identificativo di Telegram (NON il numero di telefono).",
         "    - Il suo codice fiscale.",
+        "    - Le ultime sei cifre della tua tessera sanitaria.",
         "    - La ULSS di riferimento.",
         "- I tuoi dati sono memorizzati in un server in Germania.",
         '- Se digiti "cancella", i tuoi dati vengono eliminati completamente.',
@@ -305,9 +347,7 @@ def fallback_message(message):
     reply_to(
         message,
         "No go capìo.",
-        "Per cambiare codice fiscale o ULSS, digita /ricomincia",
-        "Per cancellarti, digita /cancella",
-        "Se vuoi più informazioni o vuoi segnalare un errore, digita /info",
+        *INFO_MESSAGE,
     )
 
 
@@ -320,6 +360,7 @@ def notify_locations(subscription_id, sync=False):
 
     telegram_id = s["telegram_id"]
     fiscal_code = s["fiscal_code"]
+    health_insurance_number = s["health_insurance_number"]
     ulss_id = s["ulss_id"]
     old_locations = json.loads(s["locations"])
 
@@ -328,7 +369,7 @@ def notify_locations(subscription_id, sync=False):
         attempt += 1
         try:
             status_id, available_locations, unavailable_locations = check(
-                fiscal_code, ulss_id
+                ulss_id, fiscal_code, health_insurance_number
             )
             break
         except RecoverableException:
@@ -409,13 +450,24 @@ def notify_locations(subscription_id, sync=False):
                 telegram_id,
                 f"Ogni 4 ore controllerò se si liberano posti per {fiscal_code} nella ULSS {ulss_id}. "
                 "<u>Ti notifico solo se ci sono novità.</u>",
+                "",
+                *INFO_MESSAGE,
             )
-        if status_id == "not_registered":
+        elif status_id == "not_registered":
             send_message(
                 telegram_id,
                 f"<b>Il codice fiscale {fiscal_code} non risulta tra quelli registrati presso la ULSS {ulss_id}.</b>",
                 "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
-                "Per adesso non c'è altro che posso fare per te.",
+                "Per cambiare ULSS o Codice Fiscale, digita /ricomincia",
+                "Per /ricomincia",
+            )
+        elif status_id == "wrong_health_insurance_number":
+            send_message(
+                telegram_id,
+                f"<b>Il numero di tessera sanitaria {health_insurance_number} non è corretto.</b>",
+                "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
+                "Se vuoi ricominciare digita /ricomincia",
+                "Se vuoi riprovare digita di nuovo le <u>ultime sei cifre</u> della tua tessera sanitaria 👇",
             )
         elif status_id == "already_vaccinated":
             send_message(
@@ -423,6 +475,8 @@ def notify_locations(subscription_id, sync=False):
                 "<b>Per il codice fiscale inserito è già iniziato il percorso vaccinale.</b>",
                 "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
                 "Per adesso non c'è altro che posso fare per te.",
+                "",
+                *INFO_MESSAGE,
             )
         elif status_id == "already_booked":
             send_message(
@@ -430,12 +484,16 @@ def notify_locations(subscription_id, sync=False):
                 "<b>Per il codice fiscale inserito è già registrata una prenotazione.</b>",
                 "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
                 "Per adesso non c'è altro che posso fare per te.",
+                "",
+                *INFO_MESSAGE,
             )
         else:
             send_message(
                 telegram_id,
                 f"Ogni ora controllerò se si liberano posti per {fiscal_code} nella ULSS {ulss_id}. "
                 "<u>Ti notifico solo se ci sono novità.</u>",
+                "",
+                *INFO_MESSAGE,
             )
 
     # If something changed, we send all available locations to the user

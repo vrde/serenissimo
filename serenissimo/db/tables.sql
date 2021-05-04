@@ -41,19 +41,22 @@ CREATE INDEX IF NOT EXISTS idx_log_name ON log(name);
 --
 -- Views
 --
+DROP VIEW IF EXISTS view_stale_subscriptions;
 CREATE VIEW IF NOT EXISTS view_stale_subscriptions AS
 SELECT user.id as user_id,
   user.telegram_id,
   subscription.id as subscription_id,
   subscription.ulss_id,
   subscription.fiscal_code,
+  subscription.health_insurance_number,
   subscription.status_id,
   subscription.last_check,
   subscription.locations
 FROM user
   INNER JOIN subscription ON (user.id = subscription.user_id)
   INNER JOIN status ON (status.id = subscription.status_id)
-WHERE subscription.ulss_id IS NOT NULL
-  AND status_id NOT IN ("already_booked", "already_vaccinated")
+WHERE status_id NOT IN ("already_booked", "already_vaccinated")
+  AND subscription.ulss_id IS NOT NULL
   AND subscription.fiscal_code IS NOT NULL
+  AND subscription.health_insurance_number IS NOT NULL
   AND subscription.last_check <= CAST(strftime('%s', 'now') AS INT) - status.update_interval

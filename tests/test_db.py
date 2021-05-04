@@ -12,6 +12,16 @@ FC7 = "XXXXXXXXXXXXXXX7"
 FC8 = "XXXXXXXXXXXXXXX8"
 FC9 = "XXXXXXXXXXXXXXX9"
 
+HN1 = "111111"
+HN2 = "222222"
+HN3 = "333333"
+HN4 = "444444"
+HN5 = "555555"
+HN6 = "666666"
+HN7 = "777777"
+HN8 = "888888"
+HN9 = "999999"
+
 
 class TestDB(unittest.TestCase):
     def setUp(self):
@@ -161,30 +171,30 @@ class TestDB(unittest.TestCase):
         one_day_ago = now - 24 * 60 * 60
 
         insert = """
-            INSERT INTO subscription (user_id, ulss_id, fiscal_code, status_id, last_check)
-            VALUES (?, ?, ?, ?, ?)"""
+            INSERT INTO subscription (user_id, ulss_id, fiscal_code, health_insurance_number, status_id, last_check)
+            VALUES (?, ?, ?, ?, ?, ?)"""
 
         self.c.executemany(
             insert,
             [
                 # Yep
-                [alice, 1, FC1, "unknown", 0],
+                [alice, 1, FC1, HN1, "unknown", 0],
                 # Yep
-                [alice, 1, FC2, "eligible", one_hour_ago],
+                [alice, 1, FC2, HN2, "eligible", one_hour_ago],
                 # Nope
-                [bob, 1, FC3, "eligible", now],
+                [bob, 1, FC3, HN3, "eligible", now],
                 # Nope
-                [bob, 1, FC4, "not_eligible", one_hour_ago],
+                [bob, 1, FC4, HN4, "not_eligible", one_hour_ago],
                 # Yep
-                [bob, 1, FC5, "not_registered", one_day_ago],
+                [bob, 1, FC5, HN5, "not_registered", one_day_ago],
                 # Yep
-                [carol, 1, FC6, "maybe_eligible", six_hour_ago],
+                [carol, 1, FC6, HN6, "maybe_eligible", six_hour_ago],
                 # Nope
-                [carol, 1, FC7, "maybe_eligible", now],
+                [carol, 1, FC7, HN7, "maybe_eligible", now],
                 # Nope
-                [carol, 1, FC8, "maybe_eligible", now],
+                [carol, 1, FC8, HN8, "maybe_eligible", now],
                 # Nope
-                [carol, 1, FC9, "already_vaccinated", six_hour_ago],
+                [carol, 1, FC9, HN9, "already_vaccinated", six_hour_ago],
             ],
         )
 
@@ -199,6 +209,7 @@ class TestDB(unittest.TestCase):
                     "telegram_id": "1234",
                     "ulss_id": 1,
                     "fiscal_code": "XXXXXXXXXXXXXXX1",
+                    "health_insurance_number": HN1,
                     "status_id": "unknown",
                     "last_check": 0,
                     "locations": "null",
@@ -209,6 +220,7 @@ class TestDB(unittest.TestCase):
                     "telegram_id": "1234",
                     "ulss_id": 1,
                     "fiscal_code": "XXXXXXXXXXXXXXX2",
+                    "health_insurance_number": HN2,
                     "status_id": "eligible",
                     "last_check": one_hour_ago,
                     "locations": "null",
@@ -218,6 +230,7 @@ class TestDB(unittest.TestCase):
                     "subscription_id": 5,
                     "telegram_id": "5678",
                     "fiscal_code": "XXXXXXXXXXXXXXX5",
+                    "health_insurance_number": HN5,
                     "ulss_id": 1,
                     "status_id": "not_registered",
                     "last_check": one_day_ago,
@@ -228,6 +241,7 @@ class TestDB(unittest.TestCase):
                     "subscription_id": 6,
                     "telegram_id": "9012",
                     "fiscal_code": "XXXXXXXXXXXXXXX6",
+                    "health_insurance_number": HN6,
                     "ulss_id": 1,
                     "status_id": "maybe_eligible",
                     "last_check": six_hour_ago,

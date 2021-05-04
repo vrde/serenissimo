@@ -29,16 +29,16 @@ URL_SERVICE = URL_ULSS + "/azione/sceglisede/servizio/{}"
 URL_CHECK = URL_ULSS + "/azione/controllocf"
 
 
-def check(cf, ulss):
+def check(ulss, fiscal_code, health_insurance_number):
     try:
-        return _check(cf, ulss)
+        return _check(ulss, fiscal_code, health_insurance_number)
     except requests.exceptions.RequestException:
         raise AgentHTTPException()
 
 
-def _check(cf, ulss):
+def _check(ulss, fiscal_code, health_insurance_number):
     session = requests.Session()
-    data = {"cod_fiscale": cf}
+    data = {"cod_fiscale": fiscal_code, "num_tessera": health_insurance_number}
 
     # Get cookie
     session.get(URL_ULSS.format(ulss))
@@ -51,7 +51,7 @@ def _check(cf, ulss):
 
     # Ginepraio time!
     try:
-        state, url = start(html, cf, ulss)
+        state, url = start(html, fiscal_code, ulss)
     except UnknownPayload as e:
         # Seems like ULSS 1 has a different "start" page, so we try to extract locations
         # directly from the html
@@ -114,6 +114,12 @@ def start(html, cf, ulss):
         in html
     ):
         return "not_registered", None
+
+    if (
+        "Il numero tessera non risulta valido per il codice fiscale indicato. Si prega di riprovare"
+        in html
+    ):
+        return "wrong_health_insurance_number", None
 
     if (
         "Per il codice fiscale inserito &egrave; gi&agrave; iniziato il percorso vaccinale"

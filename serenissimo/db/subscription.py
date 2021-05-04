@@ -1,14 +1,14 @@
 from .common import select_last_id
 
 
-def insert(c, user_id, ulss_id=None, fiscal_code=None):
+def insert(c, user_id, ulss_id=None, fiscal_code=None, health_insurance_number=None):
     # This is a bot, so users insert fields incrementally. We ask for the ULSS
     # first, then the fiscal_code, so there can be only one "incomplete"
     # subscription.
     insert = """
-        INSERT INTO subscription (user_id, ulss_id, fiscal_code)
-        VALUES (?, ?, ?)"""
-    c.execute(insert, (user_id, ulss_id, fiscal_code))
+        INSERT INTO subscription (user_id, ulss_id, fiscal_code, health_insurance_number)
+        VALUES (?, ?, ?, ?)"""
+    c.execute(insert, (user_id, ulss_id, fiscal_code, health_insurance_number))
     return select_last_id(c)
 
 
@@ -17,6 +17,7 @@ def update(
     id,
     ulss_id=None,
     fiscal_code=None,
+    health_insurance_number=None,
     status_id=None,
     locations=None,
     set_last_check=False,
@@ -27,6 +28,7 @@ def update(
         SET
             ulss_id = coalesce(:ulss_id, ulss_id),
             fiscal_code = coalesce(:fiscal_code, fiscal_code),
+            health_insurance_number = coalesce(:health_insurance_number, health_insurance_number),
             status_id = coalesce(:status_id, status_id),
             locations = coalesce(:locations, locations),
             last_check = (SELECT CASE WHEN :set_last_check THEN CAST(strftime('%s', 'now') AS INT) ELSE last_check END)
@@ -39,6 +41,7 @@ def update(
             "id": id,
             "ulss_id": ulss_id,
             "fiscal_code": fiscal_code,
+            "health_insurance_number": health_insurance_number,
             "status_id": status_id,
             "locations": locations,
             "set_last_check": set_last_check,
@@ -73,6 +76,7 @@ def by_id(c, subscription_id):
             subscription.id as subscription_id,
             subscription.ulss_id,
             subscription.fiscal_code,
+            subscription.health_insurance_number,
             subscription.status_id,
             subscription.last_check,
             subscription.locations

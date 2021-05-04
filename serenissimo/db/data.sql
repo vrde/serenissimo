@@ -42,6 +42,12 @@ VALUES (
         )
     ),
     (
+        'wrong_health_insurance_number',
+        (
+            SELECT 7 * 24 * 60 * 60
+        )
+    ),
+    (
         'already_booked',
         (
             SELECT 7 * 24 * 60 * 60
