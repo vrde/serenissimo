@@ -45,9 +45,10 @@ def send_message(telegram_id, *messages, reply_markup=None, parse_mode="HTML"):
             disable_web_page_preview=True,
         )
     except apihelper.ApiTelegramException as e:
-        # User blocked us, remove them
-        log.info("User %s blocked us, delete all their data", telegram_id)
+        log.exception()
         if e.error_code == 403:
+            # User blocked us, remove them
+            log.info("User %s blocked us, delete all their data", telegram_id)
             with db.transaction() as t:
                 user = db.user.by_telegram_id(t, telegram_id)
                 if user:
@@ -59,9 +60,10 @@ def reply_to(message, *messages):
     try:
         bot.reply_to(message, "\n".join(messages))
     except apihelper.ApiTelegramException as e:
-        # User blocked us, remove them
-        log.info("User %s blocked us, delete all their data", telegram_id)
+        log.exception()
         if e.error_code == 403:
+            # User blocked us, remove them
+            log.info("User %s blocked us, delete all their data", telegram_id)
             with db.transaction() as t:
                 user = db.user.by_telegram_id(t, telegram_id)
                 if user:
@@ -220,7 +222,6 @@ def health_insurance_number_message(message):
         return send_welcome(message)
 
     state_id, notified = notify_locations(subscription["id"], sync=True)
-    # send_message(telegram_id, INFO_MESSAGE)
     send_stats()
 
 
@@ -313,7 +314,9 @@ def send_stats():
     stats = db.stats.select(db.connect())
     send_message(
         ADMIN_ID,
-        "Subscribers: {users}\nVaccinated: {vaccinated}".format(**stats),
+        f"Users: {stats['users']}",
+        f"Users (incomplete): {stats['users_incomplete']}",
+        f"Vaccinated: {stats['vaccinated']}",
     )
 
 
