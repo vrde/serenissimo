@@ -411,7 +411,7 @@ def notify_locations(subscription_id, sync=False):
             return None, None
 
     formatted_available = format_locations(available_locations)
-    formatted_unavailable = format_locations(unavailable_locations)
+    formatted_unavailable = format_locations(unavailable_locations, limit=500)
     formatted_old = format_locations(old_locations)
 
     should_notify = formatted_available != formatted_old and available_locations
@@ -449,7 +449,7 @@ def notify_locations(subscription_id, sync=False):
             )
             send_message(
                 telegram_id,
-                'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
+                'Prenotati sul <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
                 "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
             )
 
@@ -520,7 +520,7 @@ def notify_locations(subscription_id, sync=False):
             formatted_available,
             '<a href="https://serenissimo.granzotto.net/#perch%C3%A9-ricevo-notifiche-per-categorie-a-cui-non-appartengo">Come funzionano le notifiche?</a>',
             "",
-            'Prenotati su <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
+            'Prenotati sul <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
             "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
         )
     with db.transaction() as t:

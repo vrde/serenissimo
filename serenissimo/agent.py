@@ -200,13 +200,11 @@ def extract_locations(html):
     return available, unavailable
 
 
-def format_locations(locations, indent=0, limit=1024):
-    message = _format_locations(locations, indent=indent)
+def format_locations(locations, limit=3500):
+    message = _format_locations(locations)
     truncated = str(BeautifulSoup(message[:limit], "html.parser"))
     if len(message) != len(truncated):
-        truncated = (
-            f"{truncated}…\n<i>Nota: il messaggio è troppo lungo e l'ho troncato</i>"
-        )
+        truncated = f"{truncated}…\n<i>Nota: ho troncato il messaggio</i>"
     return truncated
 
 
@@ -220,7 +218,7 @@ def _format_locations(locations, indent=0):
         for k in keys:
             v = locations[k]
             b.append(f"{spacing}<i><u>{k}</u></i>:")
-            b.append(format_locations(v, indent=indent + 2))
+            b.append(_format_locations(v, indent=indent + 2))
             b.append("")
     else:
         for l in locations:
