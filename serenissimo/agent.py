@@ -200,8 +200,17 @@ def extract_locations(html):
     return available, unavailable
 
 
-def format_locations(locations, indent=0, limit=3000):
-    ellipsis = "<i>e altre sedi...</i>"
+def format_locations(locations, indent=0, limit=1024):
+    message = _format_locations(locations, indent=indent)
+    truncated = str(BeautifulSoup(message[:limit], "html.parser"))
+    if len(message) != len(truncated):
+        truncated = (
+            f"{truncated}…\n<i>Nota: il messaggio è troppo lungo e l'ho troncato</i>"
+        )
+    return truncated
+
+
+def _format_locations(locations, indent=0):
     if not locations:
         return ""
     b = []
@@ -211,25 +220,11 @@ def format_locations(locations, indent=0, limit=3000):
         for k in keys:
             v = locations[k]
             b.append(f"{spacing}<i><u>{k}</u></i>:")
-            # Stuff
-            if limit - len("\n".join(b)) <= 0:
-                return ellipsis
-            b.append(
-                format_locations(v, indent=indent + 2, limit=limit - len("\n".join(b)))
-            )
-            # is
-            if limit - len("\n".join(b)) <= 0:
-                return ellipsis
+            b.append(format_locations(v, indent=indent + 2))
             b.append("")
-            # breaking
-            if limit - len("\n".join(b)) <= 0:
-                return ellipsis
     else:
         for l in locations:
             b.append("{}- {}".format(spacing, l))
-            # allow me to be sloppy here
-            if limit - len("\n".join(b)) <= 0:
-                return ellipsis
     return "\n".join(b)
 
 
