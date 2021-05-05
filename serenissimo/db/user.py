@@ -30,5 +30,6 @@ def select_active(c):
         FROM user
             INNER JOIN subscription ON (user.id = subscription.user_id)
         WHERE subscription.ulss_id IS NOT NULL
-            AND subscription.fiscal_code IS NOT NULL"""
+            AND subscription.fiscal_code IS NOT NULL
+            AND subscription.health_insurance_number IS NOT NULL"""
     return c.execute(select)
