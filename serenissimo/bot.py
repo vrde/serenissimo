@@ -135,7 +135,7 @@ def ulss_message(message):
     markup = types.ReplyKeyboardRemove(selective=False)
     send_message(
         telegram_id,
-        "Oro benòn. Mandami il tuo codice fiscale 👇",
+        "Oro benón. Mandami il tuo codice fiscale 👇",
         reply_markup=markup,
     )
 
@@ -439,7 +439,7 @@ def notify_locations(subscription_id, sync=False):
                 telegram_id,
                 "<b>Sedi disponibili:</b>",
                 "",
-                formatted_available or "Non ci sono risultati\n",
+                formatted_available or "Al momento non ci sono sedi disponibili\n",
             )
             send_message(
                 telegram_id,
