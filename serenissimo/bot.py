@@ -475,7 +475,7 @@ def notify_locations(subscription_id, sync=False):
                 f"<b>Il numero di tessera sanitaria {health_insurance_number} non è corretto.</b>",
                 "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
                 "Se vuoi ricominciare digita /ricomincia",
-                'Se vuoi riprovare digita di nuovo le <u>ultime sei cifre</u> della tua <a href="https://it.wikipedia.org/wiki/Tessera_sanitaria">tessera sanitaria europea</a> 👇',
+                'Se vuoi riprovare digita di nuovo le <u>ultime sei cifre</u> della tua <a href="https://it.wikipedia.org/wiki/Tessera_sanitaria">tessera sanitaria europea</a> (quella plastificata per intenderci) 👇',
             )
         elif status_id == "already_vaccinated":
             send_message(
