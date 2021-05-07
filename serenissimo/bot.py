@@ -181,7 +181,7 @@ def fiscal_code_message(message):
     markup = types.ReplyKeyboardRemove(selective=False)
     send_message(
         telegram_id,
-        "Ultimo sforso! Mandami le <u>ultime sei cifre</u> della tua tessera sanitaria 👇",
+        'Ultimo sforso! Mandami le <u>ultime sei cifre</u> della tua <a href="https://it.wikipedia.org/wiki/Tessera_sanitaria">tessera sanitaria europea</a> 👇',
         reply_markup=markup,
     )
 
@@ -475,7 +475,7 @@ def notify_locations(subscription_id, sync=False):
                 f"<b>Il numero di tessera sanitaria {health_insurance_number} non è corretto.</b>",
                 "Controlla comunque nel sito ufficiale e se ho sbagliato per favore contattami!",
                 "Se vuoi ricominciare digita /ricomincia",
-                "Se vuoi riprovare digita di nuovo le <u>ultime sei cifre</u> della tua tessera sanitaria 👇",
+                'Se vuoi riprovare digita di nuovo le <u>ultime sei cifre</u> della tua <a href="https://it.wikipedia.org/wiki/Tessera_sanitaria">tessera sanitaria europea</a> 👇',
             )
         elif status_id == "already_vaccinated":
             send_message(
