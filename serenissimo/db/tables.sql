@@ -2,7 +2,9 @@ CREATE TABLE IF NOT EXISTS user (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   telegram_id TEXT,
   ts DATETIME DEFAULT (CAST(strftime('%s', 'now') AS INT)),
-  last_message DATETIME
+  last_message DATETIME,
+  snooze_from INTEGER,
+  snooze_to INTEGER
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_telegram_id ON user(telegram_id);
 CREATE TABLE IF NOT EXISTS subscription (
@@ -60,3 +62,14 @@ WHERE status_id NOT IN ("already_booked", "already_vaccinated")
   AND subscription.fiscal_code IS NOT NULL
   AND subscription.health_insurance_number IS NOT NULL
   AND subscription.last_check <= CAST(strftime('%s', 'now') AS INT) - status.update_interval
+  AND (
+    (
+      user.snooze_from IS NULL
+      AND user.snooze_to IS NULL
+    )
+    OR (
+      -- Adjust to the Veneto timezone lol
+      user.snooze_from < CAST(strftime('%s', 'now') AS INT) + 7200
+      AND user.snooze_to > CAST(strftime('%s', 'now') AS INT) + 7200
+    )
+  )

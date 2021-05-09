@@ -19,6 +19,40 @@ def insert(c, telegram_id):
     return select_last_id(c)
 
 
+def update(c, id, snooze_from=None, snooze_to=None):
+    update = """
+        UPDATE
+            user
+        SET
+            snooze_from = coalesce(:snooze_from, snooze_from),
+            snooze_to = coalesce(:snooze_to, snooze_to)
+        WHERE
+            id = :id"""
+    return c.execute(
+        update,
+        {
+            "id": id,
+            "snooze_from": snooze_from,
+            "snooze_to": snooze_to,
+        },
+    )
+
+
+def reset_snooze(c, id):
+    update = """
+        UPDATE
+            user
+        SET
+            snooze_from = NULL,
+            snooze_to = NULL
+        WHERE
+            id = :id"""
+    return c.execute(
+        update,
+        {"id": id},
+    )
+
+
 def delete(c, user_id):
     delete = "DELETE FROM user WHERE id = ?"
     return c.execute(delete, (user_id,))
