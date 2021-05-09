@@ -14,7 +14,7 @@ logger = logging.getLogger()
 
 
 @contextmanager
-def transaction(database="db.sqlite"):
+def transaction(database="db.sqlite") -> sqlite3.Connection:
     # We must issue a "BEGIN IMMEDIATE" explicitly when running in auto-commit mode.
     c = connect(database)
     c.execute("BEGIN IMMEDIATE")
@@ -30,7 +30,7 @@ def transaction(database="db.sqlite"):
 
 
 @contextmanager
-def connection(database="db.sqlite"):
+def connection(database="db.sqlite") -> sqlite3.Connection:
     c = connect(database)
     try:
         yield c
@@ -62,7 +62,7 @@ def tracer(id):
     return trace
 
 
-def connect(database="db.sqlite"):
+def connect(database="db.sqlite") -> sqlite3.Connection:
     c = sqlite3.connect(database, isolation_level=None)
     c.execute("PRAGMA foreign_keys = ON")
     c.execute("PRAGMA journal_mode = wal")
@@ -71,11 +71,11 @@ def connect(database="db.sqlite"):
     return c
 
 
-def init(c):
+def init(c: sqlite3.Connection) -> None:
     script = pkg_resources.resource_string(__name__, "tables.sql")
     c.executescript(script.decode("utf8"))
 
 
-def init_data(c):
+def init_data(c: sqlite3.Connection) -> None:
     script = pkg_resources.resource_string(__name__, "data.sql")
     c.executescript(script.decode("utf8"))
