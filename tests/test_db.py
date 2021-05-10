@@ -28,6 +28,7 @@ class TestDB(unittest.TestCase):
         self.c = db.connect(":memory:")
         db.init(self.c)
         db.init_data(self.c)
+        self.maxDiff = None
 
     def test_init(self):
         r = self.c.execute("SELECT COUNT(*) as total FROM ulss")
@@ -170,17 +171,35 @@ class TestDB(unittest.TestCase):
         one_hour_ago = now - 60 * 60
         six_hour_ago = now - 6 * 60 * 60
         one_day_ago = now - 24 * 60 * 60
-        offset = -7200
-
-        # I manually adjust the timezone to Europe/Rome in the query.
+        # Manually adjust the timezone to Europe/Rome in the query.
         # That's not the best approach but I really want to keep things simple for now.
         db.user.update(
             self.c,
             alice,
-            # alice snoozes from one hour ago
-            snooze_from=now - 60 * 60 + offset,
-            # to one hour from now
-            snooze_to=now + 60 * 60 + offset,
+            # The math here is a bit tricky. The DB is UTC so we manually
+            # adjust to +2 CEST. We calculate alice's snooze_from and snooze_to
+            # from there. I this case alice snoozes from -1, +1 from now.
+            snooze_from=self.c.execute(
+                "SELECT CAST(strftime('%H', datetime('now', '+1 hours')) AS INT) as h"
+            ).fetchone()["h"],
+            snooze_to=self.c.execute(
+                "SELECT CAST(strftime('%H', datetime('now', '+3 hours')) AS INT) as h"
+            ).fetchone()["h"],
+        )
+
+        db.user.update(
+            self.c,
+            carol,
+            # Carol snoozes from -6 to -4 from now, so she should receive
+            # notifications.
+            # -6 from now is 2 - 6 = -4
+            # -4 from now is 2 - 4 = -2
+            snooze_from=self.c.execute(
+                "SELECT CAST(strftime('%H', datetime('now', '-4 hours')) AS INT) as h"
+            ).fetchone()["h"],
+            snooze_to=self.c.execute(
+                "SELECT CAST(strftime('%H', datetime('now', '-2 hours')) AS INT) as h"
+            ).fetchone()["h"],
         )
 
         insert = """
@@ -298,17 +317,6 @@ class TestDB(unittest.TestCase):
                     "locations": "null",
                 },
                 {
-                    "user_id": 1,
-                    "subscription_id": 2,
-                    "telegram_id": "1234",
-                    "ulss_id": 1,
-                    "fiscal_code": "XXXXXXXXXXXXXXX2",
-                    "health_insurance_number": HN2,
-                    "status_id": "eligible",
-                    "last_check": one_hour_ago,
-                    "locations": "null",
-                },
-                {
                     "user_id": 2,
                     "subscription_id": 5,
                     "telegram_id": "5678",
@@ -328,6 +336,17 @@ class TestDB(unittest.TestCase):
                     "ulss_id": 1,
                     "status_id": "maybe_eligible",
                     "last_check": six_hour_ago,
+                    "locations": "null",
+                },
+                {
+                    "user_id": 1,
+                    "subscription_id": 2,
+                    "telegram_id": "1234",
+                    "ulss_id": 1,
+                    "fiscal_code": "XXXXXXXXXXXXXXX2",
+                    "health_insurance_number": HN2,
+                    "status_id": "eligible",
+                    "last_check": one_hour_ago,
                     "locations": "null",
                 },
             ],

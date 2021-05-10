@@ -64,12 +64,14 @@ WHERE status_id NOT IN ("already_booked", "already_vaccinated")
   AND subscription.last_check <= CAST(strftime('%s', 'now') AS INT) - status.update_interval
   AND (
     (
+      -- The user has not set snooze time
       user.snooze_from IS NULL
       AND user.snooze_to IS NULL
     )
     OR (
-      -- Adjust to the Veneto timezone lol
-      user.snooze_from < CAST(strftime('%s', 'now') AS INT) + 7200
-      AND user.snooze_to > CAST(strftime('%s', 'now') AS INT) + 7200
+      -- If the user as set snooze time, check it
+      -- (and adjust to the correct timezone)
+      strftime('%H', datetime('now', '+2 hours')) NOT BETWEEN user.snooze_from AND user.snooze_to
     )
   )
+ORDER BY subscription.last_check ASC;
