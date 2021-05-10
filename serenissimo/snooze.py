@@ -26,7 +26,7 @@ def gen_markup_snooze(snooze_from, snooze_to):
         ["Dalle ore 👉", "noop"],
         ["20:00", "snooze_from_20"],
         ["22:00", "snooze_from_22"],
-        ["00:00", "snooze_from_00"],
+        ["24:00", "snooze_from_24"],
         ["Alle ore 👉", "noop"],
         ["6:00", "snooze_to_06"],
         ["8:00", "snooze_to_08"],
@@ -54,9 +54,13 @@ def gen_markup_snooze(snooze_from, snooze_to):
             else label_no_thanks,
             callback_data="snooze_none",
         ),
-        InlineKeyboardButton("Salva e chiudi", callback_data="snooze_hide"),
         row_width=1,
     )
+    # Show save button only if the user selected a valid interval or an empty interval
+    if bool(snooze_from is None) == bool(snooze_to is None):
+        markup.add(
+            InlineKeyboardButton("Salva e chiudi", callback_data="snooze_hide"),
+        )
     return markup
 
 
@@ -77,10 +81,11 @@ def callback_query(call):
         snooze_to = snooze_to_current
 
     if data.startswith("snooze_"):
+        # Show snooze markup
         if data == "snooze_show":
             interval = ""
             if snooze_from is not None and snooze_to is not None:
-                interval = f"OK, niente notifiche tra le <b>{snooze_from}:00</b> e le <b>{snooze_to}:00</b>"
+                interval = f"Non ti mando notifiche tra le <b>{snooze_from}:00</b> e le <b>{snooze_to}:00</b>"
             bot.edit_message_text(
                 f"{MESSAGE_OPEN}\n\n{interval}",
                 telegram_id,
@@ -89,6 +94,7 @@ def callback_query(call):
                 parse_mode="HTML",
             )
             bot.answer_callback_query(call_id, show_alert=False)
+        # Hide snooze markup
         elif data == "snooze_hide":
             bot.edit_message_text(
                 MESSAGE_CLOSED,
@@ -114,13 +120,13 @@ def callback_query(call):
 
             interval = ""
             if snooze_from is not None and snooze_to is not None:
-                interval = f"OK, niente notifiche tra le <b>{snooze_from}:00</b> e le <b>{snooze_to}:00</b>"
+                interval = f"\n\nNon ti mando notifiche tra le <b>{snooze_from}:00</b> e le <b>{snooze_to}:00</b>"
 
             # If the bot tries to edit a message but the content is the same, it gets a 400,
             # so we check if there are actual changes to push
             if snooze_from != snooze_from_current or snooze_to != snooze_to_current:
                 bot.edit_message_text(
-                    f"{MESSAGE_OPEN}\n\n{interval}",
+                    f"{MESSAGE_OPEN}{interval}",
                     telegram_id,
                     message_id,
                     reply_markup=gen_markup_snooze(snooze_from, snooze_to),

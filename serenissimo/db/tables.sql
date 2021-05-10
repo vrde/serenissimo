@@ -68,10 +68,11 @@ WHERE status_id NOT IN ("already_booked", "already_vaccinated")
       user.snooze_from IS NULL
       AND user.snooze_to IS NULL
     )
-    OR (
+    OR NOT (
       -- If the user as set snooze time, check it
       -- (and adjust to the correct timezone)
-      strftime('%H', datetime('now', '+2 hours')) NOT BETWEEN user.snooze_from AND user.snooze_to
+      strftime('%H', datetime('now', '+2 hours')) >= user.snooze_from
+      OR strftime('%H', datetime('now', '+2 hours')) < user.snooze_to
     )
   )
 ORDER BY subscription.last_check ASC;
