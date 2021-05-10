@@ -3,13 +3,20 @@ from . import db
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 
+MESSAGE_CLOSED = (
+    "Le notifiche notturne ti disturbano?\nSe sì, schiaccia il pulsante qui sotto 👇"
+)
+BUTTON_CLOSED = "🌜 Modifica gli orari delle notifiche 🦉"
+MESSAGE_OPEN = "⏰ se vuoi disattivare le notifiche di notte, seleziona l'intervallo orario che preferisci e non ti disturberò!"
+
+
+def init_message(telegram_id):
+    send_message(telegram_id, MESSAGE_CLOSED, reply_markup=gen_markup_settings())
+
+
 def gen_markup_settings():
     markup = InlineKeyboardMarkup()
-    markup.add(
-        InlineKeyboardButton(
-            "Le notifiche notturne ti disturbano? 🌜", callback_data="snooze_show"
-        )
-    )
+    markup.add(InlineKeyboardButton(BUTTON_CLOSED, callback_data="snooze_show"))
     return markup
 
 
@@ -47,7 +54,7 @@ def gen_markup_snooze(snooze_from, snooze_to):
             else label_no_thanks,
             callback_data="snooze_none",
         ),
-        InlineKeyboardButton("Chiudi", callback_data="snooze_hide"),
+        InlineKeyboardButton("Salva e chiudi", callback_data="snooze_hide"),
         row_width=1,
     )
     return markup
@@ -55,7 +62,7 @@ def gen_markup_snooze(snooze_from, snooze_to):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_query(call):
-    print(call)
+    # print(call)
     telegram_id = str(call.from_user.id)
     call_id = call.id
     message_id = call.message.id
@@ -71,17 +78,25 @@ def callback_query(call):
 
     if data.startswith("snooze_"):
         if data == "snooze_show":
-            bot.edit_message_reply_markup(telegram_id, message_id)
-            send_message(
+            interval = ""
+            if snooze_from is not None and snooze_to is not None:
+                interval = f"OK, niente notifiche tra le <b>{snooze_from}:00</b> e le <b>{snooze_to}:00</b>"
+            bot.edit_message_text(
+                f"{MESSAGE_OPEN}\n\n{interval}",
                 telegram_id,
-                "⏰ Se vuoi disattivare le notifiche di notte, seleziona l'intervallo orario che preferisci e non ti disturberò!",
+                message_id,
                 reply_markup=gen_markup_snooze(snooze_from_current, snooze_to_current),
+                parse_mode="HTML",
             )
+            bot.answer_callback_query(call_id, show_alert=False)
         elif data == "snooze_hide":
-            bot.edit_message_reply_markup(
-                telegram_id, message_id, reply_markup=gen_markup_settings()
+            bot.edit_message_text(
+                MESSAGE_CLOSED,
+                telegram_id,
+                message_id,
+                reply_markup=gen_markup_settings(),
             )
-            # send_message(telegram_id, "", reply_markup=gen_markup_settings())
+            bot.answer_callback_query(call_id, "Impostazioni salvate")
         else:
             if data.startswith("snooze_from"):
                 snooze_from = int(data.split("_").pop())
@@ -99,17 +114,16 @@ def callback_query(call):
 
             interval = ""
             if snooze_from is not None and snooze_to is not None:
-                interval = (
-                    f"OK, niente notifiche tra le {snooze_from}:00 e le {snooze_to}:00"
-                )
+                interval = f"OK, niente notifiche tra le <b>{snooze_from}:00</b> e le <b>{snooze_to}:00</b>"
 
             # If the bot tries to edit a message but the content is the same, it gets a 400,
             # so we check if there are actual changes to push
             if snooze_from != snooze_from_current or snooze_to != snooze_to_current:
                 bot.edit_message_text(
-                    f"⏰ Se vuoi disattivare le notifiche di notte, seleziona l'intervallo orario che preferisci e non ti disturberò!\n\n{interval}",
+                    f"{MESSAGE_OPEN}\n\n{interval}",
                     telegram_id,
                     message_id,
                     reply_markup=gen_markup_snooze(snooze_from, snooze_to),
+                    parse_mode="HTML",
                 )
-        bot.answer_callback_query(call_id, "")
+            bot.answer_callback_query(call_id, show_alert=False)
