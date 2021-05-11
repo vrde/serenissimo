@@ -44,7 +44,12 @@ CREATE INDEX IF NOT EXISTS idx_log_name ON log(name);
 -- Views
 --
 DROP VIEW IF EXISTS view_stale_subscriptions;
-CREATE VIEW IF NOT EXISTS view_stale_subscriptions AS
+CREATE VIEW IF NOT EXISTS view_stale_subscriptions AS WITH const AS (
+  SELECT CAST(strftime('%s', 'now') AS INT) AS now_utc,
+    CAST(
+      strftime('%H', datetime('now', '+2 hours')) AS INT
+    ) AS hour_cest
+)
 SELECT user.id as user_id,
   user.telegram_id,
   subscription.id as subscription_id,
@@ -54,25 +59,34 @@ SELECT user.id as user_id,
   subscription.status_id,
   subscription.last_check,
   subscription.locations
-FROM user
+FROM const,
+  user
   INNER JOIN subscription ON (user.id = subscription.user_id)
   INNER JOIN status ON (status.id = subscription.status_id)
 WHERE status_id NOT IN ("already_booked", "already_vaccinated")
   AND subscription.ulss_id IS NOT NULL
   AND subscription.fiscal_code IS NOT NULL
   AND subscription.health_insurance_number IS NOT NULL
-  AND subscription.last_check <= CAST(strftime('%s', 'now') AS INT) - status.update_interval
+  AND subscription.last_check <= now_utc - status.update_interval
   AND (
     (
-      -- The user has not set snooze time
+      -- The user did not set snooze time
       user.snooze_from IS NULL
       AND user.snooze_to IS NULL
     )
-    OR NOT (
-      -- If the user as set snooze time, check it
-      -- (and adjust to the correct timezone)
-      strftime('%H', datetime('now', '+2 hours')) >= user.snooze_from
-      OR strftime('%H', datetime('now', '+2 hours')) < user.snooze_to
+    OR (
+      user.snooze_from >= user.snooze_to
+      AND (
+        hour_cest < user.snooze_from
+        AND hour_cest >= user.snooze_to
+      )
+      OR (
+        user.snooze_from < user.snooze_to
+        AND (
+          hour_cest < user.snooze_from
+          OR hour_cest >= user.snooze_to
+        )
+      )
     )
   )
 ORDER BY subscription.last_check ASC;
