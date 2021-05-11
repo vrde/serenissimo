@@ -70,9 +70,9 @@ WHERE status_id NOT IN ("already_booked", "already_vaccinated")
   AND subscription.last_check <= now_utc - status.update_interval
   AND (
     (
-      -- The user did not set snooze time
+      -- If one or both values are NULL, check.
       user.snooze_from IS NULL
-      AND user.snooze_to IS NULL
+      OR user.snooze_to IS NULL
     )
     OR (
       user.snooze_from >= user.snooze_to
