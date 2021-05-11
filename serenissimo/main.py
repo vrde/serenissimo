@@ -402,12 +402,12 @@ def notify_locations(subscription_id, sync=False):
                 "",
                 formatted_available or "Al momento non ci sono sedi disponibili\n",
             )
-            send_message(
-                telegram_id,
-                "<b>Sedi NON disponibili:</b>",
-                "",
-                formatted_unavailable or "Non ci sono risultati\n",
-            )
+            # send_message(
+            #    telegram_id,
+            #    "<b>Sedi NON disponibili:</b>",
+            #    "",
+            #    formatted_unavailable or "Non ci sono risultati\n",
+            # )
             send_message(
                 telegram_id,
                 'Prenotati sul <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
@@ -421,8 +421,8 @@ def notify_locations(subscription_id, sync=False):
                 "<u>Ti notifico solo se ci sono novità.</u>",
                 "",
                 *INFO_MESSAGE,
-                reply_markup=snooze.gen_markup_settings(),
             )
+            snooze.init_message(telegram_id)
         elif status_id == "not_registered":
             send_message(
                 telegram_id,
@@ -464,8 +464,8 @@ def notify_locations(subscription_id, sync=False):
                 "<u>Ti notifico solo se ci sono novità.</u>",
                 "",
                 *INFO_MESSAGE,
-                reply_markup=snooze.gen_markup_settings(),
             )
+            snooze.init_message(telegram_id)
 
     # If something changed, we send all available locations to the user
     elif should_notify:
@@ -485,8 +485,8 @@ def notify_locations(subscription_id, sync=False):
             "",
             'Prenotati sul <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
             "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
-            reply_markup=snooze.gen_markup_settings(),
         )
+        snooze.init_message(telegram_id)
     with db.transaction() as t:
         db.subscription.update(
             t,

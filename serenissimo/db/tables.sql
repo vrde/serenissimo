@@ -2,7 +2,9 @@ CREATE TABLE IF NOT EXISTS user (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   telegram_id TEXT,
   ts DATETIME DEFAULT (CAST(strftime('%s', 'now') AS INT)),
-  last_message DATETIME
+  last_message DATETIME,
+  snooze_from INTEGER,
+  snooze_to INTEGER
 );
 CREATE UNIQUE INDEX IF NOT EXISTS idx_user_telegram_id ON user(telegram_id);
 CREATE TABLE IF NOT EXISTS subscription (
@@ -42,7 +44,12 @@ CREATE INDEX IF NOT EXISTS idx_log_name ON log(name);
 -- Views
 --
 DROP VIEW IF EXISTS view_stale_subscriptions;
-CREATE VIEW IF NOT EXISTS view_stale_subscriptions AS
+CREATE VIEW IF NOT EXISTS view_stale_subscriptions AS WITH const AS (
+  SELECT CAST(strftime('%s', 'now') AS INT) AS now_utc,
+    CAST(
+      strftime('%H', datetime('now', '+2 hours')) AS INT
+    ) AS hour_cest
+)
 SELECT user.id as user_id,
   user.telegram_id,
   subscription.id as subscription_id,
@@ -52,11 +59,34 @@ SELECT user.id as user_id,
   subscription.status_id,
   subscription.last_check,
   subscription.locations
-FROM user
+FROM const,
+  user
   INNER JOIN subscription ON (user.id = subscription.user_id)
   INNER JOIN status ON (status.id = subscription.status_id)
 WHERE status_id NOT IN ("already_booked", "already_vaccinated")
   AND subscription.ulss_id IS NOT NULL
   AND subscription.fiscal_code IS NOT NULL
   AND subscription.health_insurance_number IS NOT NULL
-  AND subscription.last_check <= CAST(strftime('%s', 'now') AS INT) - status.update_interval
+  AND subscription.last_check <= now_utc - status.update_interval
+  AND (
+    (
+      -- If one or both values are NULL, check.
+      user.snooze_from IS NULL
+      OR user.snooze_to IS NULL
+    )
+    OR (
+      user.snooze_from >= user.snooze_to
+      AND (
+        hour_cest < user.snooze_from
+        AND hour_cest >= user.snooze_to
+      )
+      OR (
+        user.snooze_from < user.snooze_to
+        AND (
+          hour_cest < user.snooze_from
+          OR hour_cest >= user.snooze_to
+        )
+      )
+    )
+  )
+ORDER BY subscription.last_check ASC;

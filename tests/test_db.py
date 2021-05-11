@@ -28,13 +28,14 @@ class TestDB(unittest.TestCase):
         self.c = db.connect(":memory:")
         db.init(self.c)
         db.init_data(self.c)
+        self.maxDiff = None
 
     def test_init(self):
         r = self.c.execute("SELECT COUNT(*) as total FROM ulss")
         self.assertEqual(r.fetchone()["total"], 9)
 
         r = self.c.execute("SELECT COUNT(*) as total FROM status")
-        self.assertEqual(r.fetchone()["total"], 7)
+        self.assertEqual(r.fetchone()["total"], 8)
 
     def test_insert_user(self):
         user_id = db.user.insert(self.c, "1234")
@@ -158,6 +159,107 @@ class TestDB(unittest.TestCase):
         self.assertEqual(last["fiscal_code"], FC3)
         self.assertEqual(last["user_id"], user_id)
 
+    def test_select_active_subscriptions_snooze(self):
+        alice = db.user.insert(self.c, "1234")
+        bob = db.user.insert(self.c, "5678")
+        carol = db.user.insert(self.c, "9012")
+
+        now = self.c.execute(
+            "SELECT CAST(strftime('%s', 'now') AS INT) as now"
+        ).fetchone()["now"]
+
+        one_hour_ago = now - 60 * 60
+        six_hour_ago = now - 6 * 60 * 60
+        one_day_ago = now - 24 * 60 * 60
+        # Manually adjust the timezone to Europe/Rome in the query.
+        # That's not the best approach but I really want to keep things simple for now.
+        db.user.update(
+            self.c,
+            alice,
+            # The math here is a bit tricky. The DB is UTC so we manually
+            # adjust to +2 CEST. We calculate alice's snooze_from and snooze_to
+            # from there. I this case alice snoozes from -1, +1 from now.
+            snooze_from=self.c.execute(
+                "SELECT CAST(strftime('%H', datetime('now', '+1 hours')) AS INT) as h"
+            ).fetchone()["h"],
+            snooze_to=self.c.execute(
+                "SELECT CAST(strftime('%H', datetime('now', '+3 hours')) AS INT) as h"
+            ).fetchone()["h"],
+        )
+
+        db.user.update(
+            self.c,
+            carol,
+            # Carol snoozes from -6 to -4 from now, so she should receive
+            # notifications.
+            # -6 from now is 2 - 6 = -4
+            # -4 from now is 2 - 4 = -2
+            snooze_from=self.c.execute(
+                "SELECT CAST(strftime('%H', datetime('now', '-4 hours')) AS INT) as h"
+            ).fetchone()["h"],
+            snooze_to=self.c.execute(
+                "SELECT CAST(strftime('%H', datetime('now', '-2 hours')) AS INT) as h"
+            ).fetchone()["h"],
+        )
+
+        insert = """
+            INSERT INTO subscription (user_id, ulss_id, fiscal_code, health_insurance_number, status_id, last_check)
+            VALUES (?, ?, ?, ?, ?, ?)"""
+
+        self.c.executemany(
+            insert,
+            [
+                # Nope
+                [alice, 1, FC1, HN1, "unknown", 0],
+                # Nope
+                [alice, 1, FC2, HN2, "eligible", one_hour_ago],
+                # Nope
+                [bob, 1, FC3, HN3, "eligible", now],
+                # Nope
+                [bob, 1, FC4, HN4, "not_eligible", one_hour_ago],
+                # Yep
+                [bob, 1, FC5, HN5, "not_registered", one_day_ago],
+                # Yep
+                [carol, 1, FC6, HN6, "maybe_eligible", six_hour_ago],
+                # Nope
+                [carol, 1, FC7, HN7, "maybe_eligible", now],
+                # Nope
+                [carol, 1, FC8, HN8, "maybe_eligible", now],
+                # Nope
+                [carol, 1, FC9, HN9, "already_vaccinated", six_hour_ago],
+            ],
+        )
+
+        to_check = db.subscription.select_stale(self.c).fetchall()
+
+        self.assertEqual(
+            to_check,
+            [
+                {
+                    "user_id": 2,
+                    "subscription_id": 5,
+                    "telegram_id": "5678",
+                    "fiscal_code": "XXXXXXXXXXXXXXX5",
+                    "health_insurance_number": HN5,
+                    "ulss_id": 1,
+                    "status_id": "not_registered",
+                    "last_check": one_day_ago,
+                    "locations": "null",
+                },
+                {
+                    "user_id": 3,
+                    "subscription_id": 6,
+                    "telegram_id": "9012",
+                    "fiscal_code": "XXXXXXXXXXXXXXX6",
+                    "health_insurance_number": HN6,
+                    "ulss_id": 1,
+                    "status_id": "maybe_eligible",
+                    "last_check": six_hour_ago,
+                    "locations": "null",
+                },
+            ],
+        )
+
     def test_select_active_subscriptions(self):
         alice = db.user.insert(self.c, "1234")
         bob = db.user.insert(self.c, "5678")
@@ -215,17 +317,6 @@ class TestDB(unittest.TestCase):
                     "locations": "null",
                 },
                 {
-                    "user_id": 1,
-                    "subscription_id": 2,
-                    "telegram_id": "1234",
-                    "ulss_id": 1,
-                    "fiscal_code": "XXXXXXXXXXXXXXX2",
-                    "health_insurance_number": HN2,
-                    "status_id": "eligible",
-                    "last_check": one_hour_ago,
-                    "locations": "null",
-                },
-                {
                     "user_id": 2,
                     "subscription_id": 5,
                     "telegram_id": "5678",
@@ -245,6 +336,17 @@ class TestDB(unittest.TestCase):
                     "ulss_id": 1,
                     "status_id": "maybe_eligible",
                     "last_check": six_hour_ago,
+                    "locations": "null",
+                },
+                {
+                    "user_id": 1,
+                    "subscription_id": 2,
+                    "telegram_id": "1234",
+                    "ulss_id": 1,
+                    "fiscal_code": "XXXXXXXXXXXXXXX2",
+                    "health_insurance_number": HN2,
+                    "status_id": "eligible",
+                    "last_check": one_hour_ago,
                     "locations": "null",
                 },
             ],
