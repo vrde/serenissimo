@@ -23,13 +23,13 @@ def gen_markup_settings():
 def gen_markup_snooze(snooze_from, snooze_to):
     markup = InlineKeyboardMarkup()
     keys = [
-        ["Dalle ore 👉", "noop"],
+        ["👇 Dalle ore 👇", "noop"],
+        ["👇 Alle ore 👇", "noop"],
         ["20:00", "snooze_from_20"],
-        ["22:00", "snooze_from_22"],
-        ["24:00", "snooze_from_24"],
-        ["Alle ore 👉", "noop"],
         ["6:00", "snooze_to_06"],
+        ["22:00", "snooze_from_22"],
         ["8:00", "snooze_to_08"],
+        ["24:00", "snooze_from_24"],
         ["10:00", "snooze_to_10"],
     ]
 
@@ -46,7 +46,7 @@ def gen_markup_snooze(snooze_from, snooze_to):
 
     label_no_thanks = "No grazie, lascia le notifiche attive"
 
-    markup.add(*buttons, row_width=4)
+    markup.add(*buttons, row_width=2)
     markup.add(
         InlineKeyboardButton(
             f"{label_no_thanks} ✅"
@@ -80,7 +80,9 @@ def callback_query(call):
         snooze_from = snooze_from_current
         snooze_to = snooze_to_current
 
-    if data.startswith("snooze_"):
+    if data == "noop":
+        bot.answer_callback_query(call_id, show_alert=False)
+    elif data.startswith("snooze_"):
         # Show snooze markup
         if data == "snooze_show":
             interval = ""

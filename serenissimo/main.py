@@ -194,8 +194,9 @@ def check_message(message):
     telegram_id = str(message.from_user.id)
     with db.connection() as c:
         user = db.user.by_telegram_id(c, telegram_id)
-        subscription = db.subscription.last_by_user(c, user["id"])
-    if subscription:
+        if user:
+            subscription = db.subscription.last_by_user(c, user["id"])
+    if user and subscription:
         state, notified = notify_locations(subscription["id"], sync=True)
     else:
         send_welcome(message)
