@@ -515,13 +515,13 @@ def check_loop():
                     with db.transaction() as t:
                         db.log.insert(t, "notification", s["ulss_id"])
         end = time()
-        if stats["total"] > 0:
-            send_message(
-                ADMIN_ID,
-                "🏁 Done checking for locations",
-                "\n".join(f"{k} {v}" for k, v in stats.items()),
-                f"Total time: {end-start:.2f}s",
-            )
+        # if stats["total"] > 0:
+        #    send_message(
+        #        ADMIN_ID,
+        #        "🏁 Done checking for locations",
+        #        "\n".join(f"{k} {v}" for k, v in stats.items()),
+        #        f"Total time: {end-start:.2f}s",
+        #    )
         sleep(60)
 
 
