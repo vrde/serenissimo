@@ -1,10 +1,8 @@
 import logging
 import os
-import sys
-import traceback
 
 import telebot
-from telebot import apihelper, types
+from telebot import apihelper
 
 from . import db
 
@@ -53,3 +51,29 @@ def reply_to(message, *messages):
                 user = db.user.by_telegram_id(t, telegram_id)
                 if user:
                     db.user.delete(t, user["id"])
+
+
+def edit_message_text(
+    text,
+    chat_id=None,
+    message_id=None,
+    inline_message_id=None,
+    parse_mode=None,
+    disable_web_page_preview=None,
+    reply_markup=None,
+):
+    try:
+        bot.edit_message_text(
+            text,
+            chat_id=chat_id,
+            message_id=message_id,
+            inline_message_id=inline_message_id,
+            parse_mode=parse_mode,
+            disable_web_page_preview=disable_web_page_preview,
+            reply_markup=reply_markup,
+        )
+    except apihelper.ApiTelegramException as e:
+        if e.error_code == 400:
+            log.warning("Error editing message")
+        else:
+            raise

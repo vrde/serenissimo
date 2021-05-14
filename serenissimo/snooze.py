@@ -1,4 +1,4 @@
-from .bot import bot, send_message
+from .bot import bot, send_message, edit_message_text
 from . import db
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -88,7 +88,7 @@ def callback_query(call):
             interval = ""
             if snooze_from is not None and snooze_to is not None:
                 interval = f"Non ti mando notifiche tra le <b>{snooze_from}:00</b> e le <b>{snooze_to}:00</b>"
-            bot.edit_message_text(
+            edit_message_text(
                 f"{MESSAGE_OPEN}\n\n{interval}",
                 telegram_id,
                 message_id,
@@ -98,7 +98,7 @@ def callback_query(call):
             bot.answer_callback_query(call_id, show_alert=False)
         # Hide snooze markup
         elif data == "snooze_hide":
-            bot.edit_message_text(
+            edit_message_text(
                 MESSAGE_CLOSED,
                 telegram_id,
                 message_id,
@@ -127,7 +127,7 @@ def callback_query(call):
             # If the bot tries to edit a message but the content is the same, it gets a 400,
             # so we check if there are actual changes to push
             if snooze_from != snooze_from_current or snooze_to != snooze_to_current:
-                bot.edit_message_text(
+                edit_message_text(
                     f"{MESSAGE_OPEN}{interval}",
                     telegram_id,
                     message_id,
