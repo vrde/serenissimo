@@ -339,6 +339,8 @@ def notify_locations(subscription_id, sync=False):
             break
         except RecoverableException:
             if attempt == 3:
+                with db.transaction() as t:
+                    db.log.insert(t, "http-error", ulss_id)
                 log.error(
                     "HTTP Error for telegram_id %s, ulss_id %s, fiscal_code %s",
                     telegram_id,
@@ -355,6 +357,8 @@ def notify_locations(subscription_id, sync=False):
                     )
                 return None, None
         except UnknownPayload:
+            with db.transaction() as t:
+                db.log.insert(t, "application-error", ulss_id)
             log.exception(
                 "Payload Error for telegram_id %s, ulss_id %s, fiscal_code %s",
                 telegram_id,
