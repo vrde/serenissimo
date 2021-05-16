@@ -5,7 +5,6 @@ import sys
 import re
 import traceback
 from collections import Counter
-from datetime import datetime
 from threading import Thread
 from time import sleep, time
 
@@ -22,7 +21,6 @@ from .agent import (
     UnknownPayload,
     check,
     format_locations,
-    format_state,
 )
 
 log = logging.getLogger()
@@ -151,7 +149,7 @@ def fiscal_code_message(message):
 def clean_health_insurance_number(text):
     if text:
         text = text.replace(" ", "")
-        if re.match("^\d{6}$", text):
+        if re.match(r"^\d{6}$", text):
             return text
 
 
@@ -498,15 +496,15 @@ def check_loop():
     if not DEV:
         sleep(60)
     while True:
-        stats = Counter()
+        s = Counter()
         start = time()
         with db.connection() as c:
             for s in db.subscription.select_stale(c):
-                stats["total"] += 1
+                s["total"] += 1
                 state, notified = notify_locations(s["subscription_id"])
-                stats[state] += 1
+                s[state] += 1
                 if notified:
-                    stats["notified"] += 1
+                    s["notified"] += 1
                     with db.transaction() as t:
                         db.log.insert(t, "notification", s["ulss_id"])
         end = time()
