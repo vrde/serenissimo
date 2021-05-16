@@ -496,15 +496,15 @@ def check_loop():
     if not DEV:
         sleep(60)
     while True:
-        s = Counter()
+        counter = Counter()
         start = time()
         with db.connection() as c:
             for s in db.subscription.select_stale(c):
-                s["total"] += 1
+                counter["total"] += 1
                 state, notified = notify_locations(s["subscription_id"])
-                s[state] += 1
+                counter[state] += 1
                 if notified:
-                    s["notified"] += 1
+                    counter["notified"] += 1
                     with db.transaction() as t:
                         db.log.insert(t, "notification", s["ulss_id"])
         end = time()
