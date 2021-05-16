@@ -12,6 +12,7 @@ setuptools.setup(
     install_requires=[
         "requests>=2,<3",
         "beautifulsoup4>=4,<5",
+        "matplotlib>=3,<4",
         "pyTelegramBotAPI>=3,<4",
         "python-codicefiscale==0.3.7",
         "python-dotenv==0.17.0",

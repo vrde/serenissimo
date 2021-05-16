@@ -16,6 +16,10 @@ TOKEN = os.getenv("TELEGRAM_TOKEN")
 bot = telebot.TeleBot(TOKEN, parse_mode=None)
 
 
+def from_admin(message):
+    return ADMIN_ID == str(message.from_user.id)
+
+
 def send_message(telegram_id, *messages, reply_markup=None, parse_mode="HTML"):
     if DEV:
         telegram_id = ADMIN_ID

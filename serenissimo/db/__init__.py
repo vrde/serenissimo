@@ -13,6 +13,13 @@ import logging
 logger = logging.getLogger()
 
 
+def dict_factory(c, row):
+    d = {}
+    for idx, col in enumerate(c.description):
+        d[col[0]] = row[idx]
+    return d
+
+
 @contextmanager
 def transaction(database="db.sqlite") -> sqlite3.Connection:
     # We must issue a "BEGIN IMMEDIATE" explicitly when running in auto-commit mode.
@@ -30,21 +37,14 @@ def transaction(database="db.sqlite") -> sqlite3.Connection:
 
 
 @contextmanager
-def connection(database="db.sqlite") -> sqlite3.Connection:
-    c = connect(database)
+def connection(database="db.sqlite", row_factory=dict_factory) -> sqlite3.Connection:
+    c = connect(database, row_factory=row_factory)
     try:
         yield c
     except:
         raise
     finally:
         c.close()
-
-
-def dict_factory(c, row):
-    d = {}
-    for idx, col in enumerate(c.description):
-        d[col[0]] = row[idx]
-    return d
 
 
 total = 0
@@ -62,11 +62,12 @@ def tracer(id):
     return trace
 
 
-def connect(database="db.sqlite") -> sqlite3.Connection:
+def connect(database="db.sqlite", row_factory=dict_factory) -> sqlite3.Connection:
     c = sqlite3.connect(database, isolation_level=None)
     c.execute("PRAGMA foreign_keys = ON")
     c.execute("PRAGMA journal_mode = wal")
-    c.row_factory = dict_factory
+    if row_factory:
+        c.row_factory = dict_factory
     # c.set_trace_callback(tracer(i))
     return c
 

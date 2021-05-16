@@ -12,9 +12,10 @@ from time import sleep, time
 from codicefiscale import codicefiscale
 from telebot import apihelper, types
 
-from .bot import bot, send_message, reply_to
+from .bot import bot, send_message, reply_to, from_admin
 
 from . import snooze
+from . import stats
 from . import db
 from .agent import (
     RecoverableException,
@@ -268,24 +269,14 @@ def send_info(message):
     )
 
 
-def from_admin(message):
-    return ADMIN_ID == str(message.from_user.id)
-
-
 def send_stats():
-    stats = db.stats.select(db.connect())
+    s = db.stats.select(db.connect())
     send_message(
         ADMIN_ID,
-        f"Users: {stats['users']}",
-        f"Users (incomplete): {stats['users_incomplete']}",
-        f"Vaccinated: {stats['vaccinated']}",
+        f"Users: {s['users']}",
+        f"Users (incomplete): {s['users_incomplete']}",
+        f"Vaccinated: {s['vaccinated']}",
     )
-
-
-@bot.message_handler(commands=["stats"])
-def stats_message(message):
-    if from_admin(message):
-        send_stats()
 
 
 @bot.message_handler(commands=["broadcast"])
