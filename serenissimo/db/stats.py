@@ -33,7 +33,7 @@ def group_subscribers_by_day(c):
         UNION ALL
         SELECT day -1
         FROM days
-        WHERE day > -7
+        WHERE day > -14
         )
         SELECT days.day,
         coalesce(vals.total, 0)
@@ -50,7 +50,7 @@ def group_subscribers_by_day(c):
             WHERE fiscal_code IS NOT NULL
             AND ulss_id IS NOT NULL
             AND health_insurance_number IS NOT NULL
-            AND user.ts > strftime('%s', date('now', '-7 days'))
+            AND user.ts > strftime('%s', date('now', '-14 days'))
             GROUP BY date(user.ts, 'unixepoch')
         ) AS vals ON (days.day = vals.day)
     """
@@ -65,7 +65,7 @@ def group_notifications_by_day(c):
             UNION ALL
             SELECT day -1
             FROM days
-            WHERE day > -7
+            WHERE day > -14
         )
         SELECT days.day,
         coalesce(vals.total, 0)
@@ -78,7 +78,7 @@ def group_notifications_by_day(c):
             ) as day,
             count(*) as total
             FROM log
-            WHERE ts > strftime('%s', date('now', '-7 days'))
+            WHERE ts > strftime('%s', date('now', '-14 days'))
             AND name IN ("notification")
             GROUP BY date(ts, 'unixepoch')
         ) AS vals ON (days.day = vals.day)
@@ -94,7 +94,7 @@ def group_errors_by_day(c):
             UNION ALL
             SELECT day -1
             FROM days
-            WHERE day > -7
+            WHERE day > -14
         )
         SELECT days.day,
         coalesce(vals.total, 0)
@@ -107,7 +107,7 @@ def group_errors_by_day(c):
             ) as day,
             count(*) as total
             FROM log
-            WHERE ts > strftime('%s', date('now', '-7 days'))
+            WHERE ts > strftime('%s', date('now', '-14 days'))
             AND name IN ("http-error", "application-error")
             GROUP BY date(ts, 'unixepoch')
         ) AS vals ON (days.day = vals.day)
