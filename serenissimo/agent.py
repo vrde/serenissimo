@@ -1,5 +1,4 @@
 import re
-from collections import defaultdict
 
 import requests
 from bs4 import BeautifulSoup
@@ -61,6 +60,13 @@ def _check(ulss, fiscal_code, health_insurance_number):
             raise e
         return state, available, unavailable
 
+    # That's a horrible patch
+    if state == "eligible" and url is None:
+        available, unavailable = locations(session, None, ulss, html=html)
+        if not available and not unavailable:
+            raise UnknownPayload("Error understanding payload", html, fiscal_code, ulss)
+        return state, available, unavailable
+
     if url is None:
         return state, None, None
     else:
@@ -108,6 +114,11 @@ def start(html, cf, ulss):
     if len(matches) == 1:
         return "eligible", URL_SERVICE.format(ulss, matches[0])
 
+    if html.replace(" ", "").startswith("<script>scegliserv("):
+        matches = re.findall(r"scegliserv\((\d+)\)", html.replace(" ", ""))
+        if len(matches) == 1:
+            return "eligible", URL_SERVICE.format(ulss, matches[0])
+
     # Check if the user doesn't belong to the ULSS
     if (
         "codice fiscale inserito non risulta tra quelli registrati presso questa ULSS"
@@ -145,6 +156,9 @@ def start(html, cf, ulss):
     ):
         return "not_eligible", None
 
+    if "Selezionare un servizio" in html:
+        return "eligible", None
+
     raise UnknownPayload("Error understanding payload", html, cf, ulss)
 
 
@@ -156,10 +170,21 @@ def extract_urls(html, ulss):
     soup = soupify(html)
     urls = []
 
+    if html.replace(" ", "").startswith("<script>scegliserv("):
+        matches = re.findall(r"scegliserv\((\d+)\)", html.replace(" ", ""))
+        if matches:
+            urls.append([URL_SERVICE.format(ulss, matches[0]), ""])
+
     if html.replace(" ", "").startswith("<script>act_step(2,"):
         matches = re.findall(r"act_step\(2,(\d+)\)", html.replace(" ", ""))
         if matches:
             urls.append([URL_SERVICE.format(ulss, matches[0]), ""])
+
+    for button in soup.find_all("button"):
+        onclick = button.attrs.get("onclick", "")
+        matches = re.findall(r"scegliserv\((\d+)\)", onclick.replace(" ", ""))
+        if matches:
+            urls.append([URL_SERVICE.format(ulss, matches[0]), button.text])
 
     for button in soup.find_all("button"):
         onclick = button.attrs.get("onclick", "")
