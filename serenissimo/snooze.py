@@ -23,8 +23,8 @@ def gen_markup_settings():
 def gen_markup_snooze(snooze_from, snooze_to):
     markup = InlineKeyboardMarkup()
     keys = [
-        ["👇 Dalle ore 👇", "noop"],
-        ["👇 Alle ore 👇", "noop"],
+        ["👇 Dalle ore 👇", "snooze_noop"],
+        ["👇 Alle ore 👇", "snooze_noop"],
         ["20:00", "snooze_from_20"],
         ["6:00", "snooze_to_06"],
         ["22:00", "snooze_from_22"],
@@ -64,13 +64,16 @@ def gen_markup_snooze(snooze_from, snooze_to):
     return markup
 
 
-@bot.callback_query_handler(func=lambda call: True)
+@bot.callback_query_handler(func=lambda call: call.data.startswith("snooze_"))
 def callback_query(call):
-    # print(call)
     telegram_id = str(call.from_user.id)
     call_id = call.id
     message_id = call.message.id
     data = call.data
+
+    if not data.startswith("snooze_"):
+        return
+
     with db.connection() as c:
         user = db.user.by_telegram_id(c, telegram_id)
         if not user:
@@ -80,7 +83,7 @@ def callback_query(call):
         snooze_from = snooze_from_current
         snooze_to = snooze_to_current
 
-    if data == "noop":
+    if data == "snooze_noop":
         bot.answer_callback_query(call_id, show_alert=False)
     elif data.startswith("snooze_"):
         # Show snooze markup

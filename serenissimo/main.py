@@ -11,7 +11,7 @@ from time import sleep, time
 from codicefiscale import codicefiscale
 from telebot import apihelper, types
 
-from .bot import bot, send_message, reply_to, from_admin
+from .bot import bot, send_message, reply_to, edit_message_text, from_admin
 
 from . import snooze
 from . import stats
@@ -30,6 +30,30 @@ DEV = os.getenv("DEV")
 ADMIN_ID = os.getenv("ADMIN_ID")
 
 
+def gen_markup_ulss(current=None):
+    markup = types.InlineKeyboardMarkup()
+    keys = [
+        ["ULSS1 Dolomiti", "ulss_1"],
+        ["ULSS2 Marca Trevigiana", "ulss_2"],
+        ["ULSS3 Serenissima", "ulss_3"],
+        ["ULSS4 Veneto Orientale", "ulss_4"],
+        ["ULSS5 Polesana", "ulss_5"],
+        ["ULSS6 Euganea", "ulss_6"],
+        ["ULSS7 Pedemontana", "ulss_7"],
+        ["ULSS8 Berica", "ulss_8"],
+        ["ULSS9 Scaligera", "ulss_9"],
+    ]
+    buttons = [
+        types.InlineKeyboardButton(
+            f"{label} ✅" if key == current else label,
+            callback_data=key,
+        )
+        for label, key in keys
+    ]
+    markup.add(*buttons, row_width=2)
+    return markup
+
+
 @bot.message_handler(commands=["start", "ricomincia"])
 @bot.message_handler(
     func=lambda message: message.text and message.text.strip().lower() == "ricomincia"
@@ -44,35 +68,32 @@ def send_welcome(message):
             db.user.delete(t, user["id"])
         db.user.insert(t, telegram_id)
 
-    markup = types.ReplyKeyboardMarkup(row_width=2)
-    buttons = [
-        types.KeyboardButton("ULSS1 Dolomiti"),
-        types.KeyboardButton("ULSS2 Marca Trevigiana"),
-        types.KeyboardButton("ULSS3 Serenissima"),
-        types.KeyboardButton("ULSS4 Veneto Orientale"),
-        types.KeyboardButton("ULSS5 Polesana"),
-        types.KeyboardButton("ULSS6 Euganea"),
-        types.KeyboardButton("ULSS7 Pedemontana"),
-        types.KeyboardButton("ULSS8 Berica"),
-        types.KeyboardButton("ULSS9 Scaligera"),
-    ]
-    markup.add(*buttons)
     send_message(
         telegram_id,
         "Ciao, me ciamo Serenissimo e i me gà programmà par darte na man coa prenotasiòn del vacino, queo anti-covid se intende.",
         "",
-        "Praticamente controeo ogni ora se ghe xe posto par prenotarte.",
+        "Ogni ora controllerò per te se ci sono posti liberi per vaccinarti.",
         "",
         "Per comunicazioni ufficiali riguardo ai vaccini controlla il sito https://vaccinicovid.regione.veneto.it/. "
         "Il bot è stato creato da Alberto Granzotto, per informazioni digita /info",
     )
-    send_message(telegram_id, "Seleziona la tua ULSS 👇", reply_markup=markup)
+    send_message(
+        telegram_id,
+        "Seleziona la tua ULSS schiacciando uno dei tasti qui sotto 👇",
+        reply_markup=gen_markup_ulss(),
+    )
 
 
-@bot.message_handler(regexp="^ULSS[1-9] .+$")
-def ulss_message(message):
-    telegram_id = str(message.from_user.id)
-    ulss_id = int(message.text.split()[0][-1])
+@bot.callback_query_handler(func=lambda call: call.data.startswith("ulss_"))
+def callback_query(call):
+    telegram_id = str(call.from_user.id)
+    call_id = call.id
+    message_id = call.message.id
+    data = call.data
+    if not re.match(r"^ulss_\d$", data):
+        return
+
+    ulss_id = int(data.split("_")[1])
 
     with db.transaction() as t:
         user = db.user.by_telegram_id(t, telegram_id)
@@ -89,14 +110,22 @@ def ulss_message(message):
             else:
                 db.subscription.insert(t, user["id"], ulss_id=ulss_id)
 
-    if not user:
-        return send_welcome(message)
+    bot.answer_callback_query(call_id, show_alert=False)
 
-    markup = types.ReplyKeyboardRemove(selective=False)
+    if not user:
+        return send_welcome(call)
+
+    edit_message_text(
+        f"✅ Hai selezionato <b>ULSS {ulss_id}</b>.\n<i>Se hai sbagliato digita /ricomincia</i>",
+        telegram_id,
+        message_id,
+        reply_markup=None,
+        parse_mode="HTML",
+    )
+    # markup = types.ReplyKeyboardRemove(selective=False)
     send_message(
         telegram_id,
-        "Oro benón. Mandami il tuo codice fiscale 👇",
-        reply_markup=markup,
+        "Oro benón. Scrivimi il tuo <u>codice fiscale</u> 👇",
     )
 
 
@@ -138,10 +167,14 @@ def fiscal_code_message(message):
     if not user or not subscription or not subscription["ulss_id"]:
         return send_welcome(message)
 
+    send_message(
+        telegram_id,
+        f"✅ Il tuo codice fiscale è <b>{fiscal_code}</b>.\n<i>Se hai sbagliato digita /ricomincia</i>",
+    )
     markup = types.ReplyKeyboardRemove(selective=False)
     send_message(
         telegram_id,
-        'Ultimo sforso! Mandami le <u>ultime sei cifre</u> della tua <a href="https://it.wikipedia.org/wiki/Tessera_sanitaria">tessera sanitaria europea</a> 👇',
+        'Ultimo sforso! Scrivimi le <u>ultime sei cifre</u> della tua <a href="https://it.wikipedia.org/wiki/Tessera_sanitaria">tessera sanitaria europea</a> 👇',
         reply_markup=markup,
     )
 
@@ -402,11 +435,12 @@ def notify_locations(subscription_id, sync=False):
             #    "",
             #    formatted_unavailable or "Non ci sono risultati\n",
             # )
-            send_message(
-                telegram_id,
-                'Prenotati sul <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
-                "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
-            )
+            if formatted_available:
+                send_message(
+                    telegram_id,
+                    'Prenotati sul <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
+                    "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
+                )
 
         if status_id == "not_eligible":
             send_message(
