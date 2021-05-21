@@ -1,4 +1,4 @@
-from .bot import bot, send_message, edit_message_text
+from .bot import bot, send_message, edit_message_text, edit_message_reply_markup
 from . import db
 from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
@@ -12,6 +12,12 @@ MESSAGE_OPEN = "⏰ se vuoi disattivare le notifiche di notte, seleziona l'inter
 
 def init_message(telegram_id):
     send_message(telegram_id, MESSAGE_CLOSED, reply_markup=gen_markup_settings())
+
+
+def gen_markup_init():
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton(BUTTON_CLOSED, callback_data="snooze_init"))
+    return markup
 
 
 def gen_markup_settings():
@@ -86,8 +92,20 @@ def callback_query(call):
     if data == "snooze_noop":
         bot.answer_callback_query(call_id, show_alert=False)
     elif data.startswith("snooze_"):
+        # Show snooze message
+        if data == "snooze_init":
+            # Remove the button from the previous message
+            edit_message_reply_markup(telegram_id, message_id, reply_markup=False)
+            # Empty reply to the original query
+            bot.answer_callback_query(call_id, show_alert=False)
+            # Create a new message to display the extra information
+            send_message(
+                telegram_id,
+                MESSAGE_OPEN,
+                reply_markup=gen_markup_snooze(snooze_from_current, snooze_to_current),
+            )
         # Show snooze markup
-        if data == "snooze_show":
+        elif data == "snooze_show":
             interval = ""
             if snooze_from is not None and snooze_to is not None:
                 interval = f"Non ti mando notifiche tra le <b>{snooze_from}:00</b> e le <b>{snooze_to}:00</b>"

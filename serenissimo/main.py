@@ -513,8 +513,8 @@ def notify_locations(subscription_id, sync=False):
             "",
             'Prenotati sul <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
             "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
+            reply_markup=snooze.gen_markup_init(),
         )
-        snooze.init_message(telegram_id)
     with db.transaction() as t:
         db.subscription.update(
             t,
