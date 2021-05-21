@@ -78,6 +78,23 @@ def edit_message_text(
         )
     except apihelper.ApiTelegramException as e:
         if e.error_code == 400:
-            log.warning("Error editing message")
+            log.warning("Error editing message: %s", e)
+        else:
+            raise
+
+
+def edit_message_reply_markup(
+    chat_id=None, message_id=None, inline_message_id=None, reply_markup=None
+):
+    try:
+        bot.edit_message_reply_markup(
+            chat_id=chat_id,
+            message_id=message_id,
+            inline_message_id=inline_message_id,
+            reply_markup=reply_markup,
+        )
+    except apihelper.ApiTelegramException as e:
+        if e.error_code == 400:
+            log.warning("Error editing message: %s", e)
         else:
             raise
