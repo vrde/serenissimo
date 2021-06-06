@@ -1,8 +1,8 @@
 def select(c):
-    count_vaccinated = """
-        SELECT COUNT(*) as vaccinated
+    count_booked = """
+        SELECT COUNT(*) as booked
         FROM log
-        WHERE name = 'vaccinated'"""
+        WHERE name = 'booked' AND x = 1"""
     count_incomplete = """
         SELECT COUNT(*) as users
         FROM user
@@ -20,7 +20,7 @@ def select(c):
             AND health_insurance_number IS NOT NULL
             """
     return {
-        "vaccinated": c.execute(count_vaccinated).fetchone()["vaccinated"],
+        "booked": c.execute(count_booked).fetchone()["booked"],
         "users": c.execute(count_users).fetchone()["users"],
         "users_incomplete": c.execute(count_incomplete).fetchone()["users"],
     }

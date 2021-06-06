@@ -14,6 +14,7 @@ from telebot import apihelper, types
 from .bot import bot, send_message, reply_to, edit_message_text, from_admin
 
 from . import snooze
+from . import feedback
 from . import stats
 from . import db
 from .agent import (
@@ -52,6 +53,15 @@ def gen_markup_ulss(current=None):
     ]
     markup.add(*buttons, row_width=2)
     return markup
+
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith("main_start"))
+def callback_query(call):
+    telegram_id = str(call.from_user.id)
+    call_id = call.id
+    # message_id = call.message.id
+    data = call.data
+    send_welcome(call)
 
 
 @bot.message_handler(commands=["start", "ricomincia"])
@@ -306,7 +316,7 @@ def send_stats():
         ADMIN_ID,
         f"Users: {s['users']}",
         f"Users (incomplete): {s['users_incomplete']}",
-        f"Vaccinated: {s['vaccinated']}",
+        f"Booked: {s['booked']}",
     )
 
 
@@ -331,6 +341,8 @@ def broadcast_message(message):
 
 @bot.message_handler(func=lambda message: True)
 def fallback_message(message):
+    if message.text:
+        log.info("Unknown message: %s", message.text)
     reply_to(
         message,
         "No go capìo.",
@@ -423,23 +435,22 @@ def notify_locations(subscription_id, sync=False):
         )
 
         if formatted_available or formatted_unavailable:
-            send_message(
-                telegram_id,
-                "<b>Sedi disponibili:</b>",
-                "",
-                formatted_available or "Al momento non ci sono sedi disponibili\n",
-            )
-            # send_message(
-            #    telegram_id,
-            #    "<b>Sedi NON disponibili:</b>",
-            #    "",
-            #    formatted_unavailable or "Non ci sono risultati\n",
-            # )
             if formatted_available:
                 send_message(
                     telegram_id,
+                    "<b>Sedi disponibili</b>",
+                    "",
+                    formatted_available,
+                    '<a href="https://serenissimo.granzotto.net/#perch%C3%A9-ricevo-notifiche-per-categorie-a-cui-non-appartengo">Come funzionano le notifiche?</a>',
+                    "",
                     'Prenotati sul <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
                     "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
+                    reply_markup=feedback.gen_markup_init(),
+                )
+            else:
+                send_message(
+                    telegram_id,
+                    "<b>Al momento non ci sono sedi disponibili 😞</b>",
                 )
 
         if status_id == "not_eligible":
@@ -513,7 +524,7 @@ def notify_locations(subscription_id, sync=False):
             "",
             'Prenotati sul <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
             "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
-            reply_markup=snooze.gen_markup_init(),
+            reply_markup=feedback.gen_markup_init(snooze.gen_markup_init()),
         )
     with db.transaction() as t:
         db.subscription.update(
