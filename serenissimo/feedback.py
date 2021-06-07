@@ -8,7 +8,8 @@ MESSAGE = "Ottima notizia! <b>Serenissimo ti ha aiutato a trovare posto?</b>"
 MESSAGE_UNDO = (
     "OK, non ho cancellato la tua iscrizione, continuerai a ricevere notifiche."
 )
-MESSAGE_REPLY = "Grazie. <b>Ho cancellato i tuoi dati e non riceverai più alcuna notifica.</b> Per ricominciare puoi usare il bottone qui sotto.\n\nSe hai un commento o un messaggio da condividere, scrivimi a agranzot@mailbox.org, altrimenti buon vaccino!"
+MESSAGE_REPLY = "<b>Ho cancellato i tuoi dati e non riceverai più alcuna notifica.</b> Per ricominciare puoi usare il bottone qui sotto.\n\nSe hai un commento o un messaggio da condividere, scrivimi a agranzot@mailbox.org, altrimenti buon vaccino!"
+MESSAGE_REPLY_NO = "<b>Ho cancellato i tuoi dati e non riceverai più alcuna notifica.</b> Per ricominciare puoi usare il bottone qui sotto.\n\nMi dispiace non esserti stato d'aiuto, c'è qualcosa che posso migliorare? Se sì, scrivimi a agranzot@mailbox.org, altrimenti buon vaccino!"
 
 
 def gen_markup_init(markup=None):
@@ -72,4 +73,4 @@ def callback_query(call):
             if user:
                 db.user.delete(t, user["id"])
                 db.log.insert(t, "booked", False)
-        send_message(telegram_id, MESSAGE_REPLY, reply_markup=markup)
+        send_message(telegram_id, MESSAGE_REPLY_NO, reply_markup=markup)
