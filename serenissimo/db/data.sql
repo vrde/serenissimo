@@ -20,13 +20,13 @@ VALUES (
     (
         'eligible',
         (
-            SELECT 60 * 60
+            SELECT 30 * 60
         )
     ),
     (
         'maybe_eligible',
         (
-            SELECT 60 * 60
+            SELECT 30 * 60
         )
     ),
     (

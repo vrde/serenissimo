@@ -82,7 +82,7 @@ def send_welcome(message):
         telegram_id,
         "Ciao, me ciamo Serenissimo e i me gà programmà par darte na man coa prenotasiòn del vacino, queo anti-covid se intende.",
         "",
-        "Ogni ora controllerò per te se ci sono posti liberi per vaccinarti.",
+        "Ogni 30 minuti controllerò per te se ci sono posti liberi per vaccinarti.",
         "",
         "Per comunicazioni ufficiali riguardo ai vaccini controlla il sito https://vaccinicovid.regione.veneto.it/. "
         "Il bot è stato creato da Alberto Granzotto, per informazioni digita /info",
@@ -499,7 +499,7 @@ def notify_locations(subscription_id, sync=False):
         else:
             send_message(
                 telegram_id,
-                f"Ogni ora controllerò se si liberano posti per {fiscal_code} nella ULSS {ulss_id}. "
+                f"Ogni 30 minuti controllerò se si liberano posti per {fiscal_code} nella ULSS {ulss_id}. "
                 "<u>Ti notifico solo se ci sono novità.</u>",
                 "",
                 *INFO_MESSAGE,
