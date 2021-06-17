@@ -18,7 +18,8 @@ from . import feedback
 from . import stats
 from . import db
 from .agent import (
-    RecoverableException,
+    HTTPException,
+    ApplicationException,
     UnknownPayload,
     check,
     format_locations,
@@ -363,52 +364,74 @@ def notify_locations(subscription_id, sync=False):
     ulss_id = s["ulss_id"]
     old_locations = json.loads(s["locations"])
 
-    attempt = 0
-    while True:
-        attempt += 1
-        try:
-            status_id, available_locations, unavailable_locations = check(
-                ulss_id, fiscal_code, health_insurance_number
-            )
-            break
-        except RecoverableException:
-            if attempt == 3:
-                with db.transaction() as t:
-                    db.log.insert(t, "http-error", ulss_id)
-                log.error(
-                    "HTTP Error for telegram_id %s, ulss_id %s, fiscal_code %s",
-                    telegram_id,
-                    ulss_id,
-                    fiscal_code,
-                )
-                stack = traceback.format_exception(*sys.exc_info())
-                send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
-                if sync:
-                    send_message(
-                        telegram_id,
-                        "Errore: non riesco a contattare il portale della Regione. ",
-                        "Il problema è temporaneo, riprova tra qualche minuto.",
-                    )
-                return None, None
-        except UnknownPayload:
-            with db.transaction() as t:
-                db.log.insert(t, "application-error", ulss_id)
-            log.exception(
-                "Payload Error for telegram_id %s, ulss_id %s, fiscal_code %s",
+    try:
+        status_id, available_locations, unavailable_locations = check(
+            ulss_id, fiscal_code, health_insurance_number
+        )
+    except HTTPException:
+        with db.transaction() as t:
+            db.log.insert(t, "http-error", ulss_id)
+        log.error(
+            "HTTP Error for telegram_id %s, ulss_id %s, fiscal_code %s",
+            telegram_id,
+            ulss_id,
+            fiscal_code,
+        )
+        stack = traceback.format_exception(*sys.exc_info())
+        send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
+        if sync:
+            send_message(
                 telegram_id,
-                ulss_id,
-                fiscal_code,
+                "Errore: non riesco a contattare il portale della Regione. ",
+                "Il problema è temporaneo, riprova tra qualche minuto.",
             )
-            stack = traceback.format_exception(*sys.exc_info())
-            send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
-            if sync:
-                send_message(
-                    telegram_id,
-                    "Errore: sembra che il portale della Regione sia cambiato. "
-                    "Potrebbe essere una cosa temporanea, fai un paio di tentativi. "
-                    "Se il problema persiste cercherò di sistemarlo al più presto.",
-                )
-            return None, None
+        return None, None
+    except ApplicationException:
+        with db.transaction() as t:
+            db.log.insert(t, "application-error", ulss_id)
+        log.error(
+            "HTTP Error for telegram_id %s, ulss_id %s, fiscal_code %s",
+            telegram_id,
+            ulss_id,
+            fiscal_code,
+        )
+        # stack = traceback.format_exception(*sys.exc_info())
+        # send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
+        if sync:
+            send_message(
+                telegram_id,
+                "Ho provato a inserirei i tuoi dati nel portale della Regione "
+                "ma l'operazione mi dà un errore generico.",
+                "",
+                "Puoi andare su https://vaccinicovid.regione.veneto.it/ "
+                "e verificare se il portale ti dà errore a sua volta? "
+                "Se il portale funziona ma Serenissimo no, per favore "
+                "contattami su agranzot@mailbox.org.",
+            )
+        return None, None
+    except UnknownPayload:
+        with db.transaction() as t:
+            db.log.insert(t, "payload-error", ulss_id)
+        log.exception(
+            "Payload Error for telegram_id %s, ulss_id %s, fiscal_code %s",
+            telegram_id,
+            ulss_id,
+            fiscal_code,
+        )
+        stack = traceback.format_exception(*sys.exc_info())
+        send_message(ADMIN_ID, "🤬🤬🤬\n" + "".join(stack))
+        if sync:
+            send_message(
+                telegram_id,
+                "Ho provato a inserirei i tuoi dati nel portale della Regione "
+                "ma non risco a finalizzare l'operazione.",
+                "",
+                "Puoi andare su https://vaccinicovid.regione.veneto.it/ "
+                "e verificare se il portale ti dà errore a sua volta? "
+                "Se il portale funziona ma Serenissimo no, per favore "
+                "contattami su agranzot@mailbox.org.",
+            )
+        return None, None
 
     formatted_available = format_locations(available_locations)
     formatted_unavailable = format_locations(unavailable_locations, limit=500)

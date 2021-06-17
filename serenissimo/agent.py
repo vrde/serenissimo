@@ -8,7 +8,11 @@ class RecoverableException(Exception):
     pass
 
 
-class AgentHTTPException(RecoverableException):
+class ApplicationException(RecoverableException):
+    pass
+
+
+class HTTPException(RecoverableException):
     pass
 
 
@@ -32,7 +36,7 @@ def check(ulss, fiscal_code, health_insurance_number):
     try:
         return _check(ulss, fiscal_code, health_insurance_number)
     except requests.exceptions.RequestException:
-        raise AgentHTTPException()
+        raise HTTPException()
 
 
 def _check(ulss, fiscal_code, health_insurance_number):
@@ -45,7 +49,7 @@ def _check(ulss, fiscal_code, health_insurance_number):
     # Submit the form
     r = session.post(URL_CHECK.format(ulss), data=data)
     if r.status_code != 200:
-        raise AgentHTTPException()
+        raise HTTPException()
     html = r.text
 
     # Ginepraio time!
@@ -81,7 +85,7 @@ def locations(session, url, ulss, max_depth=5, html=None):
     if html is None:
         r = session.post(url)
         if r.status_code != 200:
-            raise AgentHTTPException()
+            raise HTTPException()
         html = r.text
 
     if url and "sceglisede" in url:
@@ -125,6 +129,9 @@ def start(html, cf, ulss):
         in html
     ):
         return "not_registered", None
+
+    if "Attenzione si e verificato un problema si prega di riprovare" in html:
+        raise ApplicationException()
 
     if "Il numero tessera non risulta valido per il codice fiscale indicato" in html:
         return "wrong_health_insurance_number", None
