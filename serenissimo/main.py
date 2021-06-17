@@ -390,7 +390,7 @@ def notify_locations(subscription_id, sync=False):
         with db.transaction() as t:
             db.log.insert(t, "application-error", ulss_id)
         log.error(
-            "HTTP Error for telegram_id %s, ulss_id %s, fiscal_code %s",
+            "Application Error for telegram_id %s, ulss_id %s, fiscal_code %s",
             telegram_id,
             ulss_id,
             fiscal_code,
