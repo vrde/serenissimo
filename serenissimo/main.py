@@ -530,25 +530,40 @@ def notify_locations(subscription_id, sync=False):
             snooze.init_message(telegram_id)
 
     # If something changed, we send all available locations to the user
-    elif should_notify:
-        log.info(
-            "Notify chat_id %s, CF %s, ULSS %s, locations %s",
-            telegram_id,
-            fiscal_code,
-            ulss_id,
-            formatted_available,
-        )
-        send_message(
-            telegram_id,
-            "<b>Sedi disponibili</b>",
-            "",
-            formatted_available,
-            '<a href="https://serenissimo.granzotto.net/#perch%C3%A9-ricevo-notifiche-per-categorie-a-cui-non-appartengo">Come funzionano le notifiche?</a>',
-            "",
-            'Prenotati sul <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
-            "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
-            reply_markup=feedback.gen_markup_init(snooze.gen_markup_init()),
-        )
+    else:
+        if should_notify:
+            log.info(
+                "Notify chat_id %s, CF %s, ULSS %s, locations %s",
+                telegram_id,
+                fiscal_code,
+                ulss_id,
+                formatted_available,
+            )
+            send_message(
+                telegram_id,
+                "<b>Sedi disponibili</b>",
+                "",
+                formatted_available,
+                '<a href="https://serenissimo.granzotto.net/#perch%C3%A9-ricevo-notifiche-per-categorie-a-cui-non-appartengo">Come funzionano le notifiche?</a>',
+                "",
+                'Prenotati sul <a href="https://vaccinicovid.regione.veneto.it/">Portale della Regione</a> e ricorda che '
+                "<i>per alcune prenotazioni è richiesta l'autocertificazione</i>.",
+                reply_markup=feedback.gen_markup_init(snooze.gen_markup_init()),
+            )
+        elif status_id == "already_booked":
+            send_message(
+                telegram_id,
+                "Ciao, dal sito della Regione Veneto vedo che <b>hai già effettuato la prenotazione per il vaccino</b>.",
+                "Prima di cancellare i tuoi dati puoi dirmi se <b>Serenissimo ti ha aiutato a trovare un posto?</p>",
+                reply_markup=feedback.gen_markup_feedback(),
+            )
+        elif status_id == "already_vaccinated":
+            send_message(
+                telegram_id,
+                "Ciao, dal sito della Regione Veneto vedo che <b>ti è già stato somministrato il vaccino</b>.",
+                "Prima di cancellare i tuoi dati puoi dirmi se <b>Serenissimo ti ha aiutato a trovare un posto?</p>",
+                reply_markup=feedback.gen_markup_feedback(),
+            )
     with db.transaction() as t:
         db.subscription.update(
             t,
